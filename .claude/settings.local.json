@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Local Programming Projects\\\\New-Trial\\\\Trial2\\\\trial2\\\\Assets\\\\MyProject\\\\myScripts\" -Recurse -Filter \"*.cs\")",
+      "Bash(ForEach-Object { $content = Get-Content $_FullName)",
+      "Bash(Where-Object { $_ -notmatch '^\\\\s*///\\\\s*</?summary>' })",
+      "Bash(Set-Content -Path $_FullName -Value $content })",
+      "Bash(Write-Output \"Done removing summary tags from all .cs files\")",
+      "Bash(find:*)",
+      "Bash(git fetch:*)",
+      "Bash(git add:*)"
     ]
   }
 }

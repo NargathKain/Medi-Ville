@@ -2,143 +2,91 @@ using UnityEngine;
 
 namespace MyProject.Audio
 {
-    /// <summary>
-    /// Creates a proximity-based audio zone around a world object.
-    /// Volume increases as player gets closer, decreases as they move away.
+    /// Δημιουργεί μια "ζώνη ήχου" βασισμένη στη proximity του παίκτη.
+    /// Η ένταση αυξάνεται όσο ο παίκτης πλησιάζει στο κέντρο και μειώνεται.
     ///
-    /// Use cases:
-    /// - Campfire crackling
-    /// - Waterfall/stream sounds
-    /// - Market crowd noise
-    /// - Blacksmith hammering
-    /// - Church bells
-    ///
-    /// Setup:
-    /// 1. Add this script to any world object that should emit sound
-    /// 2. Add an AudioSource component (or assign existing one)
-    /// 3. Assign an audio clip to the AudioSource
-    /// 4. Set AudioSource: Play On Awake = true, Loop = true
-    /// 5. Configure radius and maxVolume in Inspector
-    ///
-    /// The AudioZoneDucker uses CurrentVolumeRatio to duck the ambient audio
-    /// when player is near loud zones.
-    /// </summary>
+    /// Ρύθμιση:
+    /// 1. Δημιουργήστε ένα κενό GameObject στη θέση του ήχου (κέντρο αγοράς, καταρράκτης, φωτιά κτλ)
+    /// 2. Προσθέστε AudioSource και αυτό το component, θέστε το AudioSource σε loop (Play On Awake, Loop)
+    /// 3. Προσαρμόστε ακτίνα ζώνης στο AudioSource
+    /// 4. AudioSource -> Play On Awake και Loop πρέπει να είναι ενεργά
+    /// 5. Ρυθμίστε ακτίνα και μέγιστη ένταση στον Inspector για κάθε ζώνη
     [RequireComponent(typeof(AudioSource))]
     public class ProximityAudioZone : MonoBehaviour
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
-
         [Header("Audio Source")]
 
-        /// <summary>
-        /// The AudioSource that plays this zone's audio.
-        /// Should be set to Play On Awake and Loop for continuous sounds.
-        /// </summary>
-        [Tooltip("AudioSource for this zone. Auto-found if not assigned.")]
+        /// AudioSource τοπικό που παίζει τον ήχο.
+        /// Πρέπει να ρυθμιστεί σε Play On Awake και Loop.
+        [Tooltip("AudioSource για αυτή τη ζώνη. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource audioSource;
 
         [Header("Zone Settings")]
 
-        /// <summary>
-        /// The radius of the audio zone in world units.
-        /// Player hears audio at full volume when at center (distance 0),
-        /// and volume fades to 0 at this radius distance.
-        /// </summary>
-        [Tooltip("Radius of the audio zone. Sound fades from center to this distance.")]
+        /// Ακτίνα ζώνης ήχου. Ο παίκτης ακούει τον ήχο μόνο μέσα στην ακτίνα.
+        /// Η ένταση αυξάνεται προς το κέντρο και μειώνεται.
+        [Tooltip("Ακτίνα της ζώνης ήχου. Ο ήχος σβήνει σταδιακά από το κέντρο έως αυτή την απόσταση.")]
         [Range(1f, 100f)]
         [SerializeField]
         private float radius = 15f;
 
-        /// <summary>
-        /// The maximum volume when player is at the center of the zone.
-        /// Different zones can have different loudness ceilings.
-        /// Examples: 0.9 for loud market, 0.35 for subtle fire crackle.
-        /// </summary>
-        [Tooltip("Maximum volume at zone center. Adjust per zone (e.g., 0.9 for market, 0.35 for fire).")]
+        /// Μέγιστη ένταση στο κέντρο.
+        /// Διαφορετική ανάλογα με τον τύπο περιβάλλοντος:
+        /// π.χ. 0.9 = δυνατό (αγορά), 0.35 = πιο ήρεμο (φωτιά).
+        [Tooltip("Μέγιστη ένταση στο κέντρο της ζώνης. Ρυθμίστε ανά ζώνη (π.χ. 0.9 για αγορά, 0.35 για φωτιά).")]
         [Range(0f, 1f)]
         [SerializeField]
         private float maxVolume = 0.8f;
 
         [Header("Player Detection")]
 
-        /// <summary>
-        /// Tag used to find the player. Defaults to "Player".
-        /// </summary>
-        [Tooltip("Tag to identify the player GameObject.")]
+        /// Tag για τον παίκτη. Προεπιλογή -> "Player".
+        [Tooltip("Tag για αναγνώριση του παίκτη GameObject.")]
         [SerializeField]
         private string playerTag = "Player";
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
-
-        /// <summary>
-        /// Cached reference to the player's Transform.
-        /// Found automatically in Start() using the player tag.
-        /// </summary>
+        /// Αποθηκευμένη αναφορά στο Transform του παίκτη
+        /// για αποφυγή εύρεσης κάθε frame.
         private Transform playerTransform;
 
-        /// <summary>
-        /// The current volume ratio (0-1) based on player distance.
-        /// 0 = player outside radius, 1 = player at center.
-        /// Used by AudioZoneDucker for ambient ducking calculations.
-        /// </summary>
+        /// Τρέχουσα αναλογία έντασης (0-1) με βάση την απόσταση του παίκτη.
         private float currentVolumeRatio;
 
-        //=============================================================================
-        // PROPERTIES
-        //=============================================================================
-
-        /// <summary>
-        /// Gets the current volume ratio (0-1) based on player proximity.
-        /// Used by AudioZoneDucker to determine ambient ducking.
-        /// 0 = player outside zone or at edge
-        /// 1 = player at zone center
-        /// </summary>
+        /// Επιστρέφει την τρέχουσα αναλογία έντασης (0-1) με βάση την απόσταση του παίκτη.
         public float CurrentVolumeRatio => currentVolumeRatio;
 
-        /// <summary>
-        /// Gets the configured radius of this zone.
-        /// </summary>
+        /// Επιστρέφει την ρυθμισμένη ακτίνα ζώνης για τον ήχο.
         public float Radius => radius;
 
-        /// <summary>
-        /// Gets the configured max volume of this zone.
-        /// </summary>
+        /// Επιστρέφει τη ρυθμισμένη μέγιστη ένταση στο κέντρο της ζώνης.
         public float MaxVolume => maxVolume;
-
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
 
         private void Awake()
         {
-            // Find AudioSource if not assigned
+            // Εύρεση AudioSource αν δεν ανατέθηκε
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
             }
 
-            // Configure AudioSource for zone playback
+            // Ρύθμιση AudioSource για αναπαραγωγή ζώνης
             if (audioSource != null)
             {
                 audioSource.loop = true;
                 audioSource.playOnAwake = true;
-                audioSource.spatialBlend = 0f; // 2D audio - we handle volume manually
-                audioSource.volume = 0f; // Start silent, Update will set correct volume
+                audioSource.spatialBlend = 0f; // 2D ήχος - διαχειριζόμαστε την ένταση χειροκίνητα
+                audioSource.volume = 0f; // Ξεκινά σιωπηλά, το Update θα ορίσει τη σωστή ένταση
             }
             else
             {
-                Debug.LogError($"[ProximityAudioZone] {gameObject.name}: No AudioSource found!");
+                Debug.LogError($"[ProximityAudioZone] {gameObject.name}: Δεν βρέθηκε AudioSource!");
             }
         }
 
         private void Start()
         {
-            // Find player by tag
+            // Εύρεση παίκτη με tag
             GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
             if (playerObject != null)
             {
@@ -146,10 +94,10 @@ namespace MyProject.Audio
             }
             else
             {
-                Debug.LogWarning($"[ProximityAudioZone] {gameObject.name}: No GameObject with tag '{playerTag}' found!");
+                Debug.LogWarning($"[ProximityAudioZone] {gameObject.name}: Δεν βρέθηκε GameObject με tag '{playerTag}'!");
             }
 
-            // Ensure audio is playing
+            // Διασφάλιση ότι ο ήχος παίζει
             if (audioSource != null && audioSource.clip != null && !audioSource.isPlaying)
             {
                 audioSource.Play();
@@ -158,58 +106,50 @@ namespace MyProject.Audio
 
         private void Update()
         {
-            // Skip if no player or audio source
+            // Παράλειψη αν δεν υπάρχει παίκτης ή audio source
             if (playerTransform == null || audioSource == null)
             {
                 return;
             }
 
-            // Calculate distance from player to this zone's center
+            // Υπολογισμός απόστασης από τον παίκτη στο κέντρο της ζώνης
             float distance = Vector3.Distance(playerTransform.position, transform.position);
 
-            // Map distance to a 0-1 range
-            // InverseLerp(radius, 0, distance) returns:
-            // - 0 when distance >= radius (player at edge or outside)
-            // - 1 when distance <= 0 (player at center)
-            // - Values in between for intermediate distances
+            // Αντιστοίχιση απόστασης σε εύρος 0-1
+            // InverseLerp(radius, 0, distance) επιστρέφει:
+            // - 0 όταν η απόσταση >= ακτίνα (ο παίκτης στην άκρη ή έξω)
+            // - 1 όταν η απόσταση <= 0 (ο παίκτης στο κέντρο)
+            // - Τιμές ενδιάμεσα για ενδιάμεσες αποστάσεις
             currentVolumeRatio = Mathf.InverseLerp(radius, 0f, distance);
 
-            // Calculate actual volume: lerp from 0 to maxVolume based on ratio
+            // Υπολογισμός πραγματικής έντασης: lerp από 0 έως maxVolume βάσει ratio
             float targetVolume = Mathf.Lerp(0f, maxVolume, currentVolumeRatio);
 
-            // Apply volume to AudioSource
+            // Εφαρμογή έντασης στο AudioSource
             audioSource.volume = targetVolume;
         }
 
-        //=============================================================================
-        // DEBUG VISUALIZATION
-        //=============================================================================
-
-        /// <summary>
-        /// Draws the zone radius in the Scene view for easy visualization.
-        /// Green when player is inside, yellow when outside.
-        /// </summary>
+        /// Σχεδιάζει την ακτίνα ζώνης στο Scene view όταν επιλεγεί.
+        /// Αλλάζει χρώμα αν ο παίκτης βρίσκεται μέσα, κίτρινο αν είναι έξω.
         private void OnDrawGizmosSelected()
         {
-            // Draw outer radius
+            // Σχεδίαση εξωτερικής ακτίνας
             Gizmos.color = currentVolumeRatio > 0 ? Color.green : Color.yellow;
             Gizmos.DrawWireSphere(transform.position, radius);
 
-            // Draw inner circle at 50% volume distance
-            Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f); // Orange
+            // Σχεδίαση εσωτερικού κύκλου στο 50% της απόστασης έντασης
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f); // Πορτοκαλί
             Gizmos.DrawWireSphere(transform.position, radius * 0.5f);
 
-            // Draw center point
+            // Σχεδίαση κεντρικού σημείου
             Gizmos.color = Color.red;
             Gizmos.DrawSphere(transform.position, 0.3f);
         }
 
-        /// <summary>
-        /// Always draw a small indicator so zones are visible in Scene view.
-        /// </summary>
+        /// Σχεδιάζει πάντα μια ήπια ακτίνα ζώνης στο Scene view ακόμα και όταν δεν είναι επιλεγμένο.
         private void OnDrawGizmos()
         {
-            // Draw a subtle wire sphere even when not selected
+            // Σχεδίαση ενός διακριτικού wire sphere ακόμα και όταν δεν είναι επιλεγμένο
             Gizmos.color = new Color(0f, 1f, 0f, 0.2f);
             Gizmos.DrawWireSphere(transform.position, radius);
         }

@@ -3,164 +3,116 @@ using UnityEngine;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// An interactable door that rotates open and closed when the player interacts.
-    /// Supports configurable rotation angle, speed, and pivot direction.
+    /// Μια αλληλεπιδραστική πόρτα που περιστρέφεται ανοίγοντας και κλείνοντας όταν ο παίκτης αλληλεπιδρά.
+    /// Υποστηρίζει ρυθμιζόμενη γωνία περιστροφής, ταχύτητα και κατεύθυνση pivot.
     ///
-    /// Setup:
-    /// 1. Attach this script to the door GameObject (or a parent pivot object)
-    /// 2. Add a Collider component for raycast detection
-    /// 3. Tag the GameObject as "Interactable"
-    /// 4. Ensure the door's pivot point is at the hinge location
-    /// 5. Configure rotation angle and speed in Inspector
+    /// Ρύθμιση:
+    /// 1. Προσθέστε αυτό το script στο πόρτα GameObject (ή σε ένα parent pivot object)
+    /// 2. Προσθέστε ένα Collider component για ανίχνευση raycast
+    /// 3. Βάλτε tag στο GameObject ως "Interactable"
+    /// 4. Βεβαιωθείτε ότι το pivot point της πόρτας είναι στη θέση του μεντεσέ
+    /// 5. Ρυθμίστε τη γωνία περιστροφής και την ταχύτητα στον Inspector
     ///
-    /// Note: The door rotates around its local Y-axis (up). Position the pivot
-    /// at the hinge edge for realistic door movement.
-    /// </summary>
+    /// Σημείωση: Η πόρτα περιστρέφεται γύρω από τον τοπικό Y-άξονα (πάνω). Τοποθετήστε το pivot
+    /// στην άκρη του μεντεσέ για ρεαλιστική κίνηση πόρτας.
     public class Door : MonoBehaviour, IInteractable
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
-
         [Header("Visual Feedback")]
 
-        /// <summary>
-        /// Optional indicator shown when player can interact with the door.
-        /// </summary>
-        [Tooltip("Visual indicator shown when player can interact.")]
+        /// Προαιρετική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει με την πόρτα.
+        [Tooltip("Οπτική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει.")]
         [SerializeField]
         private GameObject indicator;
 
         [Header("Door Settings")]
 
-        /// <summary>
-        /// The angle in degrees the door rotates when opened.
-        /// Positive values rotate counter-clockwise (when viewed from above).
-        /// Typical values: 90 for standard doors, 110 for wide swing.
-        /// </summary>
-        [Tooltip("Rotation angle in degrees when door opens.")]
+        /// Η γωνία σε μοίρες που περιστρέφεται η πόρτα όταν ανοίγει.
+        /// Θετικές τιμές περιστρέφουν αντίθετα από τη φορά του ρολογιού (όταν κοιτάς από πάνω).
+        /// Τυπικές τιμές: 90 για κανονικές πόρτες, 110 για ευρύ άνοιγμα.
+        [Tooltip("Γωνία περιστροφής σε μοίρες όταν η πόρτα ανοίγει.")]
         [SerializeField]
         private float openAngle = 90f;
 
-        /// <summary>
-        /// How fast the door rotates in degrees per second.
-        /// Higher values create faster door movement.
-        /// </summary>
-        [Tooltip("Rotation speed in degrees per second.")]
+        /// Πόσο γρήγορα περιστρέφεται η πόρτα σε μοίρες ανά δευτερόλεπτο.
+        /// Υψηλότερες τιμές δημιουργούν ταχύτερη κίνηση πόρτας.
+        [Tooltip("Ταχύτητα περιστροφής σε μοίρες ανά δευτερόλεπτο.")]
         [SerializeField]
         private float rotationSpeed = 180f;
 
-        /// <summary>
-        /// The axis around which the door rotates.
-        /// Default is Vector3.up (Y-axis) for horizontal hinge doors.
-        /// </summary>
-        [Tooltip("Local axis of rotation (usually Y-up for doors).")]
+        /// Ο άξονας γύρω από τον οποίο περιστρέφεται η πόρτα.
+        /// Προεπιλογή είναι Vector3.up (Y-άξονας) για οριζόντιες πόρτες με μεντεσέ.
+        [Tooltip("Τοπικός άξονας περιστροφής (συνήθως Y-up για πόρτες).")]
         [SerializeField]
         private Vector3 rotationAxis = Vector3.up;
 
         [Header("Audio (Optional)")]
 
-        /// <summary>
-        /// Sound played when the door starts opening.
-        /// </summary>
-        [Tooltip("Sound played when door opens.")]
+        /// Ήχος που παίζει όταν η πόρτα αρχίζει να ανοίγει.
+        [Tooltip("Ήχος που παίζει όταν η πόρτα ανοίγει.")]
         [SerializeField]
         private AudioClip openSound;
 
-        /// <summary>
-        /// Sound played when the door starts closing.
-        /// </summary>
-        [Tooltip("Sound played when door closes.")]
+        /// Ήχος που παίζει όταν η πόρτα αρχίζει να κλείνει.
+        [Tooltip("Ήχος που παίζει όταν η πόρτα κλείνει.")]
         [SerializeField]
         private AudioClip closeSound;
 
-        /// <summary>
-        /// AudioSource component for playing door sounds.
-        /// If not assigned, attempts to find one on this GameObject.
-        /// </summary>
-        [Tooltip("AudioSource for playing sounds. Auto-found if not assigned.")]
+        /// AudioSource component για αναπαραγωγή ήχων πόρτας.
+        /// Αν δεν ανατεθεί, προσπαθεί να βρει ένα σε αυτό το GameObject.
+        [Tooltip("AudioSource για αναπαραγωγή ήχων. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource audioSource;
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
-
-        /// <summary>
-        /// Tracks whether the door is currently open or closed.
-        /// </summary>
+        /// Παρακολουθεί αν η πόρτα είναι τώρα ανοιχτή ή κλειστή.
         private bool isOpen = false;
 
-        /// <summary>
-        /// Tracks whether the door is currently animating.
-        /// Prevents multiple interactions during movement.
-        /// </summary>
+        /// Παρακολουθεί αν η πόρτα κινείται αυτή τη στιγμή.
+        /// Αποτρέπει πολλαπλές αλληλεπιδράσεις κατά την κίνηση.
         private bool isMoving = false;
 
-        /// <summary>
-        /// The door's initial rotation, used as the "closed" state.
-        /// </summary>
+        /// Η αρχική περιστροφή της πόρτας, χρησιμοποιείται ως η "κλειστή" κατάσταση.
         private Quaternion closedRotation;
 
-        /// <summary>
-        /// The door's target rotation when fully open.
-        /// Calculated from closedRotation + openAngle.
-        /// </summary>
+        /// Η περιστροφή-στόχος της πόρτας όταν είναι πλήρως ανοιχτή.
+        /// Υπολογίζεται από closedRotation + openAngle.
         private Quaternion openRotation;
 
-        /// <summary>
-        /// Reference to the current rotation coroutine.
-        /// Allows stopping mid-animation if needed.
-        /// </summary>
+        /// Αναφορά στο τρέχον coroutine περιστροφής.
+        /// Επιτρέπει διακοπή στη μέση του animation αν χρειαστεί.
         private Coroutine rotationCoroutine;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
-
-        /// <summary>
-        /// Initializes rotation values and caches components.
-        /// </summary>
+        /// Αρχικοποιεί τιμές περιστροφής και αποθηκεύει components.
         private void Awake()
         {
-            // Store the initial (closed) rotation
+            // Αποθήκευση αρχικής (κλειστής) περιστροφής
             closedRotation = transform.localRotation;
 
-            // Calculate the open rotation by adding the open angle around the rotation axis
+            // Υπολογισμός ανοιχτής περιστροφής προσθέτοντας τη γωνία ανοίγματος γύρω από τον άξονα περιστροφής
             openRotation = closedRotation * Quaternion.AngleAxis(openAngle, rotationAxis);
 
-            // Try to find AudioSource if not assigned
+            // Προσπάθεια εύρεσης AudioSource αν δεν ανατέθηκε
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
             }
         }
 
-        //=============================================================================
-        // IINTERACTABLE IMPLEMENTATION
-        //=============================================================================
-
-        /// <summary>
-        /// The text shown in the interaction prompt.
-        /// Changes based on whether the door is open or closed.
-        /// </summary>
+        /// Το κείμενο που εμφανίζεται στο interaction prompt.
+        /// Αλλάζει ανάλογα με το αν η πόρτα είναι ανοιχτή ή κλειστή.
         public string InteractionPrompt => isOpen ? "Close Door" : "Open Door";
 
-        /// <summary>
-        /// Called when the player interacts with the door.
-        /// Toggles between open and closed states.
-        /// </summary>
-        /// <param name="interactor">The Interactor that initiated the interaction.</param>
+        /// Καλείται όταν ο παίκτης αλληλεπιδρά με την πόρτα.
+        /// Εναλλάσσει μεταξύ ανοιχτής και κλειστής κατάστασης.
+        /// <param name="interactor">Ο Interactor που ξεκίνησε την αλληλεπίδραση.</param>
         public void OnInteract(Interactor interactor)
         {
-            // Don't allow interaction while door is moving
+            // Μην επιτρέπεις αλληλεπίδραση ενώ η πόρτα κινείται
             if (isMoving)
             {
                 return;
             }
 
-            // Toggle the door state
+            // Εναλλαγή κατάστασης πόρτας
             if (isOpen)
             {
                 Close();
@@ -170,22 +122,18 @@ namespace MyProject.Interact
                 Open();
             }
 
-            // End the interaction immediately (door doesn't need sustained interaction)
+            // Τερμάτισε την αλληλεπίδραση αμέσως (η πόρτα δεν χρειάζεται συνεχή αλληλεπίδραση)
             interactor.EndInteract(this);
         }
 
-        /// <summary>
-        /// Called when interaction ends. Not used for doors.
-        /// </summary>
+        /// Καλείται όταν τελειώνει η αλληλεπίδραση. Δεν χρησιμοποιείται για πόρτες.
         public void OnEndInteract()
         {
-            // Doors don't need sustained interaction, so nothing to clean up
+            // Οι πόρτες δεν χρειάζονται συνεχή αλληλεπίδραση, άρα δεν υπάρχει τίποτα να καθαριστεί
         }
 
-        /// <summary>
-        /// Called when player looks away from the door.
-        /// Hides the visual indicator.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης κοιτάξει αλλού από την πόρτα.
+        /// Κρύβει την οπτική ένδειξη.
         public void OnAbortInteract()
         {
             if (indicator != null)
@@ -194,10 +142,8 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Called when player starts looking at the door.
-        /// Shows the visual indicator.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης αρχίσει να κοιτάζει την πόρτα.
+        /// Εμφανίζει την οπτική ένδειξη.
         public void OnReadyInteract()
         {
             if (indicator != null)
@@ -206,13 +152,7 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // DOOR OPERATIONS
-        //=============================================================================
-
-        /// <summary>
-        /// Opens the door by rotating to the open position.
-        /// </summary>
+        /// Ανοίγει την πόρτα περιστρέφοντας στην ανοιχτή θέση.
         public void Open()
         {
             if (isOpen || isMoving)
@@ -220,16 +160,14 @@ namespace MyProject.Interact
                 return;
             }
 
-            // Play open sound
+            // Αναπαραγωγή ήχου ανοίγματος
             PlaySound(openSound);
 
-            // Start rotation coroutine
+            // Έναρξη coroutine περιστροφής
             rotationCoroutine = StartCoroutine(RotateDoor(openRotation, true));
         }
 
-        /// <summary>
-        /// Closes the door by rotating to the closed position.
-        /// </summary>
+        /// Κλείνει την πόρτα περιστρέφοντας στην κλειστή θέση.
         public void Close()
         {
             if (!isOpen || isMoving)
@@ -237,16 +175,14 @@ namespace MyProject.Interact
                 return;
             }
 
-            // Play close sound
+            // Αναπαραγωγή ήχου κλεισίματος
             PlaySound(closeSound);
 
-            // Start rotation coroutine
+            // Έναρξη coroutine περιστροφής
             rotationCoroutine = StartCoroutine(RotateDoor(closedRotation, false));
         }
 
-        /// <summary>
-        /// Toggles the door between open and closed states.
-        /// </summary>
+        /// Εναλλάσσει την πόρτα μεταξύ ανοιχτής και κλειστής κατάστασης.
         public void Toggle()
         {
             if (isOpen)
@@ -259,25 +195,19 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // COROUTINES
-        //=============================================================================
-
-        /// <summary>
-        /// Smoothly rotates the door to the target rotation over time.
-        /// Uses Quaternion.RotateTowards for consistent angular speed.
-        /// </summary>
-        /// <param name="targetRotation">The rotation to rotate towards.</param>
-        /// <param name="opening">True if opening, false if closing.</param>
-        /// <returns>IEnumerator for coroutine execution.</returns>
+        /// Περιστρέφει ομαλά την πόρτα στην περιστροφή-στόχο με την πάροδο του χρόνου.
+        /// Χρησιμοποιεί Quaternion.RotateTowards για σταθερή γωνιακή ταχύτητα.
+        /// <param name="targetRotation">Η περιστροφή προς την οποία περιστρέφεται.</param>
+        /// <param name="opening">True αν ανοίγει, false αν κλείνει.</param>
+        /// <returns>IEnumerator για εκτέλεση coroutine.</returns>
         private IEnumerator RotateDoor(Quaternion targetRotation, bool opening)
         {
             isMoving = true;
 
-            // Rotate until we reach the target
+            // Περιστροφή μέχρι να φτάσουμε τον στόχο
             while (Quaternion.Angle(transform.localRotation, targetRotation) > 0.1f)
             {
-                // Rotate towards target at constant speed
+                // Περιστροφή προς τον στόχο με σταθερή ταχύτητα
                 transform.localRotation = Quaternion.RotateTowards(
                     transform.localRotation,
                     targetRotation,
@@ -287,22 +217,16 @@ namespace MyProject.Interact
                 yield return null;
             }
 
-            // Snap to exact target rotation
+            // Κούμπωμα στην ακριβή περιστροφή-στόχο
             transform.localRotation = targetRotation;
 
-            // Update state
+            // Ενημέρωση κατάστασης
             isOpen = opening;
             isMoving = false;
         }
 
-        //=============================================================================
-        // AUDIO
-        //=============================================================================
-
-        /// <summary>
-        /// Plays a sound clip if an AudioSource is available.
-        /// </summary>
-        /// <param name="clip">The audio clip to play.</param>
+        /// Αναπαράγει ένα ηχητικό clip αν υπάρχει διαθέσιμο AudioSource.
+        /// <param name="clip">Το audio clip προς αναπαραγωγή.</param>
         private void PlaySound(AudioClip clip)
         {
             if (audioSource != null && clip != null)
@@ -311,18 +235,10 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // PUBLIC ACCESSORS
-        //=============================================================================
-
-        /// <summary>
-        /// Returns whether the door is currently open.
-        /// </summary>
+        /// Επιστρέφει αν η πόρτα είναι τώρα ανοιχτή.
         public bool IsOpen => isOpen;
 
-        /// <summary>
-        /// Returns whether the door is currently moving.
-        /// </summary>
+        /// Επιστρέφει αν η πόρτα κινείται τώρα.
         public bool IsMoving => isMoving;
     }
 }

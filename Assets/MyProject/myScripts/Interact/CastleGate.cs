@@ -3,135 +3,94 @@ using UnityEngine;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// A castle gate (portcullis) that raises and lowers vertically.
-    /// Controlled externally by a Lever or other mechanism.
-    /// Does not implement IInteractable directly - use Lever to control it.
+    /// Μια πύλη κάστρου (portcullis) που ανεβαίνει και κατεβαίνει κάθετα.
+    /// Ελέγχεται εξωτερικά από έναν Μοχλό ή άλλο μηχανισμό.
+    /// Δεν υλοποιεί απευθείας το IInteractable - χρησιμοποιήστε τον Μοχλό για έλεγχο.
     ///
-    /// Setup:
-    /// 1. Attach this script to the gate GameObject
-    /// 2. Configure the raise height and movement speed
-    /// 3. Reference this component from a Lever script
+    /// Ρύθμιση:
+    /// 1. Προσθέστε αυτό το script στο πύλη GameObject
+    /// 2. Ρυθμίστε το ύψος ανύψωσης και την ταχύτητα κίνησης
+    /// 3. Κάντε reference αυτό το component από ένα Lever script
     ///
-    /// The gate moves along its local Y-axis (up/down).
-    /// </summary>
+    /// Η πύλη κινείται κατά μήκος του τοπικού Y-άξονα (πάνω/κάτω).
     public class CastleGate : MonoBehaviour
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
-
         [Header("Gate Movement")]
 
-        /// <summary>
-        /// How high the gate raises when opened (in local units).
-        /// Measure from closed position to fully open position.
-        /// </summary>
-        [Tooltip("Height the gate raises when opened (local Y units).")]
+        /// Πόσο ψηλά ανεβαίνει η πύλη όταν ανοίγει (σε τοπικές μονάδες).
+        /// Μετρήστε από την κλειστή θέση στην πλήρως ανοιχτή θέση.
+        [Tooltip("Ύψος που ανεβαίνει η πύλη όταν ανοίγει (τοπικές μονάδες Y).")]
         [SerializeField]
         private float raiseHeight = 5f;
 
-        /// <summary>
-        /// Speed at which the gate moves (units per second).
-        /// Higher values create faster gate movement.
-        /// </summary>
-        [Tooltip("Gate movement speed (units per second).")]
+        /// Ταχύτητα με την οποία κινείται η πύλη (μονάδες ανά δευτερόλεπτο).
+        /// Υψηλότερες τιμές δημιουργούν ταχύτερη κίνηση πύλης.
+        [Tooltip("Ταχύτητα κίνησης πύλης (μονάδες ανά δευτερόλεπτο).")]
         [SerializeField]
         private float moveSpeed = 2f;
 
         [Header("Audio (Optional)")]
 
-        /// <summary>
-        /// Sound played when the gate starts moving.
-        /// Could be a chain/gear sound for a portcullis.
-        /// </summary>
-        [Tooltip("Sound played when gate starts moving.")]
+        /// Ήχος που παίζει όταν η πύλη αρχίζει να κινείται.
+        /// Μπορεί να είναι ήχος αλυσίδας/γραναζιού για portcullis.
+        [Tooltip("Ήχος που παίζει όταν η πύλη αρχίζει να κινείται.")]
         [SerializeField]
         private AudioClip moveSound;
 
-        /// <summary>
-        /// Sound played when the gate reaches its destination.
-        /// Could be a heavy thud or clank.
-        /// </summary>
-        [Tooltip("Sound played when gate stops.")]
+        /// Ήχος που παίζει όταν η πύλη φτάνει στον προορισμό της.
+        /// Μπορεί να είναι ένα βαρύ γδούπο ή κλανκ.
+        [Tooltip("Ήχος που παίζει όταν η πύλη σταματά.")]
         [SerializeField]
         private AudioClip stopSound;
 
-        /// <summary>
-        /// Looping sound played while the gate is moving.
-        /// Could be chains rattling or gears turning.
-        /// </summary>
-        [Tooltip("Looping sound while gate moves.")]
+        /// Ήχος loop που παίζει ενώ η πύλη κινείται.
+        /// Μπορεί να είναι αλυσίδες που κροταλίζουν ή γρανάζια που γυρίζουν.
+        [Tooltip("Ήχος loop ενώ η πύλη κινείται.")]
         [SerializeField]
         private AudioClip movingLoopSound;
 
-        /// <summary>
-        /// AudioSource for playing sounds.
-        /// </summary>
-        [Tooltip("AudioSource for sounds. Auto-found if not assigned.")]
+        /// AudioSource για αναπαραγωγή ήχων.
+        [Tooltip("AudioSource για ήχους. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource audioSource;
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
 
-        /// <summary>
-        /// The gate's starting (closed/lowered) position.
-        /// </summary>
+        /// Η αρχική (κλειστή/κατεβασμένη) θέση της πύλης.
         private Vector3 closedPosition;
 
-        /// <summary>
-        /// The gate's raised (open) position.
-        /// Calculated as closedPosition + (up * raiseHeight).
-        /// </summary>
+        /// Η ανυψωμένη (ανοιχτή) θέση της πύλης.
+        /// Υπολογίζεται ως closedPosition + (up * raiseHeight).
         private Vector3 raisedPosition;
 
-        /// <summary>
-        /// Tracks whether the gate is currently raised (open).
-        /// </summary>
+        /// Παρακολουθεί αν η πύλη είναι τώρα ανυψωμένη (ανοιχτή).
         private bool isRaised = false;
 
-        /// <summary>
-        /// Tracks whether the gate is currently moving.
-        /// </summary>
+        /// Παρακολουθεί αν η πύλη κινείται τώρα.
         private bool isMoving = false;
 
-        /// <summary>
-        /// Reference to the current movement coroutine.
-        /// </summary>
+        /// Αναφορά στο τρέχον coroutine κίνησης.
         private Coroutine moveCoroutine;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
 
-        /// <summary>
-        /// Initializes gate positions.
-        /// </summary>
+        /// Αρχικοποιεί θέσεις πύλης.
         private void Awake()
         {
-            // Store the initial (closed) position
+            // Αποθήκευση αρχικής (κλειστής) θέσης
             closedPosition = transform.localPosition;
 
-            // Calculate the raised position
+            // Υπολογισμός ανυψωμένης θέσης
             raisedPosition = closedPosition + Vector3.up * raiseHeight;
 
-            // Find AudioSource if not assigned
+            // Εύρεση AudioSource αν δεν ανατέθηκε
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
             }
         }
 
-        //=============================================================================
-        // PUBLIC METHODS - Called by Lever or other controllers
-        //=============================================================================
 
-        /// <summary>
-        /// Raises the gate to the open position.
-        /// Call this from a Lever or switch.
-        /// </summary>
+        /// Ανυψώνει την πύλη στην ανοιχτή θέση.
+        /// Καλέστε αυτό από έναν Μοχλό ή διακόπτη.
         public void Raise()
         {
             if (isRaised || isMoving)
@@ -139,7 +98,7 @@ namespace MyProject.Interact
                 return;
             }
 
-            // Stop any existing movement
+            // Σταμάτησε οποιαδήποτε υπάρχουσα κίνηση
             if (moveCoroutine != null)
             {
                 StopCoroutine(moveCoroutine);
@@ -148,10 +107,8 @@ namespace MyProject.Interact
             moveCoroutine = StartCoroutine(MoveGate(raisedPosition, true));
         }
 
-        /// <summary>
-        /// Lowers the gate to the closed position.
-        /// Call this from a Lever or switch.
-        /// </summary>
+        /// Κατεβάζει την πύλη στην κλειστή θέση.
+        /// Καλέστε αυτό από έναν Μοχλό ή διακόπτη.
         public void Lower()
         {
             if (!isRaised || isMoving)
@@ -159,7 +116,7 @@ namespace MyProject.Interact
                 return;
             }
 
-            // Stop any existing movement
+            // Σταμάτησε οποιαδήποτε υπάρχουσα κίνηση
             if (moveCoroutine != null)
             {
                 StopCoroutine(moveCoroutine);
@@ -168,9 +125,7 @@ namespace MyProject.Interact
             moveCoroutine = StartCoroutine(MoveGate(closedPosition, false));
         }
 
-        /// <summary>
-        /// Toggles the gate between raised and lowered states.
-        /// </summary>
+        /// Εναλλάσσει την πύλη μεταξύ ανυψωμένης και κατεβασμένης κατάστασης.
         public void Toggle()
         {
             if (isRaised)
@@ -183,43 +138,35 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Immediately sets the gate to a specific state without animation.
-        /// Useful for initialization or cutscenes.
-        /// </summary>
-        /// <param name="raised">True to set raised, false to set lowered.</param>
+        /// Ορίζει αμέσως την πύλη σε συγκεκριμένη κατάσταση χωρίς animation.
+        /// Χρήσιμο για αρχικοποίηση ή cutscenes.
+        /// <param name="raised">True για ορισμό ως ανυψωμένη, false για κατεβασμένη.</param>
         public void SetStateImmediate(bool raised)
         {
-            // Stop any current movement
+            // Σταμάτησε οποιαδήποτε τρέχουσα κίνηση
             if (moveCoroutine != null)
             {
                 StopCoroutine(moveCoroutine);
                 isMoving = false;
             }
 
-            // Set position immediately
+            // Ορισμός θέσης αμέσως
             transform.localPosition = raised ? raisedPosition : closedPosition;
             isRaised = raised;
         }
 
-        //=============================================================================
-        // COROUTINES
-        //=============================================================================
-
-        /// <summary>
-        /// Smoothly moves the gate to the target position.
-        /// </summary>
-        /// <param name="targetPosition">The position to move to.</param>
-        /// <param name="raising">True if raising, false if lowering.</param>
-        /// <returns>IEnumerator for coroutine.</returns>
+        /// Κινεί ομαλά την πύλη στη θέση-στόχο.
+        /// <param name="targetPosition">Η θέση προς την οποία κινείται.</param>
+        /// <param name="raising">True αν ανυψώνεται, false αν κατεβαίνει.</param>
+        /// <returns>IEnumerator για coroutine.</returns>
         private IEnumerator MoveGate(Vector3 targetPosition, bool raising)
         {
             isMoving = true;
 
-            // Play start sound
+            // Αναπαραγωγή ήχου έναρξης
             PlaySound(moveSound);
 
-            // Start looping sound
+            // Έναρξη ήχου loop
             if (movingLoopSound != null && audioSource != null)
             {
                 audioSource.clip = movingLoopSound;
@@ -227,7 +174,7 @@ namespace MyProject.Interact
                 audioSource.Play();
             }
 
-            // Move towards target
+            // Κίνηση προς τον στόχο
             while (Vector3.Distance(transform.localPosition, targetPosition) > 0.01f)
             {
                 transform.localPosition = Vector3.MoveTowards(
@@ -239,32 +186,26 @@ namespace MyProject.Interact
                 yield return null;
             }
 
-            // Snap to exact position
+            // Κούμπωμα στην ακριβή θέση
             transform.localPosition = targetPosition;
 
-            // Stop looping sound
+            // Διακοπή ήχου loop
             if (audioSource != null && audioSource.loop)
             {
                 audioSource.loop = false;
                 audioSource.Stop();
             }
 
-            // Play stop sound
+            // Αναπαραγωγή ήχου διακοπής
             PlaySound(stopSound);
 
-            // Update state
+            // Ενημέρωση κατάστασης
             isRaised = raising;
             isMoving = false;
         }
 
-        //=============================================================================
-        // AUDIO
-        //=============================================================================
-
-        /// <summary>
-        /// Plays a one-shot sound clip.
-        /// </summary>
-        /// <param name="clip">The clip to play.</param>
+        /// Αναπαράγει ένα ηχητικό clip μία φορά.
+        /// <param name="clip">Το clip προς αναπαραγωγή.</param>
         private void PlaySound(AudioClip clip)
         {
             if (audioSource != null && clip != null)
@@ -273,34 +214,20 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // PUBLIC ACCESSORS
-        //=============================================================================
-
-        /// <summary>
-        /// Returns whether the gate is currently raised (open).
-        /// </summary>
+        /// Επιστρέφει αν η πύλη είναι τώρα ανυψωμένη (ανοιχτή).
         public bool IsRaised => isRaised;
 
-        /// <summary>
-        /// Returns whether the gate is currently moving.
-        /// </summary>
+        /// Επιστρέφει αν η πύλη κινείται τώρα.
         public bool IsMoving => isMoving;
 
-        //=============================================================================
-        // DEBUG VISUALIZATION
-        //=============================================================================
-
-        /// <summary>
-        /// Draws the gate's open and closed positions in the Scene view.
-        /// </summary>
+        /// Σχεδιάζει τις ανοιχτές και κλειστές θέσεις της πύλης στο Scene view.
         private void OnDrawGizmosSelected()
         {
-            // Calculate positions (use current if not in play mode)
+            // Υπολογισμός θέσεων (χρήση τρέχουσας αν δεν είμαστε σε play mode)
             Vector3 closed = Application.isPlaying ? closedPosition : transform.localPosition;
             Vector3 raised = closed + Vector3.up * raiseHeight;
 
-            // Convert to world space for drawing
+            // Μετατροπή σε world space για σχεδίαση
             Vector3 closedWorld = transform.parent != null
                 ? transform.parent.TransformPoint(closed)
                 : closed;
@@ -308,15 +235,15 @@ namespace MyProject.Interact
                 ? transform.parent.TransformPoint(raised)
                 : raised;
 
-            // Draw closed position
+            // Σχεδίαση κλειστής θέσης
             Gizmos.color = Color.red;
             Gizmos.DrawWireCube(closedWorld, Vector3.one * 0.5f);
 
-            // Draw raised position
+            // Σχεδίαση ανυψωμένης θέσης
             Gizmos.color = Color.green;
             Gizmos.DrawWireCube(raisedWorld, Vector3.one * 0.5f);
 
-            // Draw movement path
+            // Σχεδίαση διαδρομής κίνησης
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(closedWorld, raisedWorld);
         }

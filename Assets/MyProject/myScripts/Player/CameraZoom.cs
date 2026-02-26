@@ -4,7 +4,6 @@ using UnityEngine.InputSystem;
 
 namespace MyProject.Player
 {
-    /// <summary>
     /// Handles camera zoom functionality for the third-person controller.
     /// When the player holds the Zoom button (RMB or Gamepad RB), the camera smoothly
     /// zooms in by reducing the Cinemachine camera distance, creating an over-the-shoulder view.
@@ -19,7 +18,6 @@ namespace MyProject.Player
     /// 2. Assign the Cinemachine Virtual Camera reference in the Inspector
     /// 3. Ensure "Zoom" action exists in StarterAssets.inputactions (RMB / RB)
     /// 4. Adjust zoom distances and speed as desired
-    /// </summary>
     public class CameraZoom : MonoBehaviour
     {
         //=============================================================================
@@ -28,36 +26,28 @@ namespace MyProject.Player
 
         [Header("Camera Reference")]
 
-        /// <summary>
         /// Reference to the Cinemachine Virtual Camera that follows the player.
         /// This camera must have a Cinemachine3rdPersonFollow component attached.
-        /// </summary>
         [Tooltip("The Cinemachine Virtual Camera following the player.")]
         [SerializeField]
         private CinemachineVirtualCamera virtualCamera;
 
         [Header("Zoom Settings")]
 
-        /// <summary>
         /// The default camera distance when not zooming.
         /// This is the normal third-person view distance.
-        /// </summary>
         [Tooltip("Default camera distance when not zoomed in.")]
         [SerializeField]
         private float defaultDistance = 4f;
 
-        /// <summary>
         /// The camera distance when zoomed in (holding right mouse button).
         /// Lower values bring the camera closer for an over-the-shoulder view.
-        /// </summary>
         [Tooltip("Camera distance when zoomed in (holding RMB).")]
         [SerializeField]
         private float zoomedDistance = 1.5f;
 
-        /// <summary>
         /// How fast the camera transitions between default and zoomed distances.
         /// Higher values create snappier zoom, lower values create smoother transitions.
-        /// </summary>
         [Tooltip("Speed of zoom transition. Higher = faster.")]
         [SerializeField]
         private float zoomSpeed = 8f;
@@ -66,40 +56,28 @@ namespace MyProject.Player
         // PRIVATE FIELDS
         //=============================================================================
 
-        /// <summary>
         /// Reference to the Cinemachine3rdPersonFollow component that controls camera positioning.
         /// Cached on Start for performance.
-        /// </summary>
         private Cinemachine3rdPersonFollow thirdPersonFollow;
 
-        /// <summary>
         /// Reference to the PlayerInput component for reading input actions.
-        /// </summary>
         private PlayerInput playerInput;
 
-        /// <summary>
         /// Reference to the Zoom input action from the StarterAssets input actions.
-        /// </summary>
         private InputAction zoomAction;
 
-        /// <summary>
         /// The target distance we're lerping towards (either defaultDistance or zoomedDistance).
-        /// </summary>
         private float targetDistance;
 
-        /// <summary>
         /// Tracks whether the zoom button is currently being held.
-        /// </summary>
         private bool isZooming;
 
         //=============================================================================
         // UNITY LIFECYCLE METHODS
         //=============================================================================
 
-        /// <summary>
         /// Called when the script instance is being loaded.
         /// Caches the Cinemachine3rdPersonFollow component, PlayerInput, and Zoom action.
-        /// </summary>
         private void Start()
         {
             // Validate that we have a virtual camera assigned
@@ -154,9 +132,7 @@ namespace MyProject.Player
             thirdPersonFollow.CameraDistance = defaultDistance;
         }
 
-        /// <summary>
         /// Called every frame. Checks for zoom input and smoothly interpolates camera distance.
-        /// </summary>
         private void Update()
         {
             // Check for right mouse button input using the new Input System
@@ -170,11 +146,9 @@ namespace MyProject.Player
         // INPUT HANDLING
         //=============================================================================
 
-        /// <summary>
         /// Reads the Zoom action state from the Input System.
         /// Sets isZooming to true while the button is held, false when released.
         /// Supports both keyboard/mouse (RMB) and gamepad (Right Shoulder) input.
-        /// </summary>
         private void HandleZoomInput()
         {
             // Check if the Zoom action is currently being pressed
@@ -195,10 +169,8 @@ namespace MyProject.Player
         // ZOOM LOGIC
         //=============================================================================
 
-        /// <summary>
         /// Smoothly interpolates the camera distance from current value to target value.
         /// Uses Lerp for smooth transitions that feel natural and polished.
-        /// </summary>
         private void SmoothZoom()
         {
             // Only process if we have a valid reference
@@ -231,16 +203,12 @@ namespace MyProject.Player
         // PUBLIC METHODS (for external access if needed)
         //=============================================================================
 
-        /// <summary>
         /// Returns whether the camera is currently zoomed in.
         /// Useful for other scripts that need to know the zoom state
         /// (e.g., to show/hide crosshair, change sensitivity, etc.)
-        /// </summary>
         public bool IsZoomed => isZooming;
 
-        /// <summary>
         /// Allows external scripts to change the default zoom distance at runtime.
-        /// </summary>
         /// <param name="distance">The new default camera distance.</param>
         public void SetDefaultDistance(float distance)
         {
@@ -253,9 +221,7 @@ namespace MyProject.Player
             }
         }
 
-        /// <summary>
         /// Allows external scripts to change the zoomed distance at runtime.
-        /// </summary>
         /// <param name="distance">The new zoomed camera distance.</param>
         public void SetZoomedDistance(float distance)
         {

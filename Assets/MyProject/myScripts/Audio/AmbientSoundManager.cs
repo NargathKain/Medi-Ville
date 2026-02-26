@@ -2,120 +2,86 @@ using UnityEngine;
 
 namespace MyProject.Audio
 {
-    /// <summary>
-    /// Singleton manager for ambient background audio.
-    /// Handles playing a looping ambient track and allows volume ducking
-    /// when the player enters loud proximity zones (e.g., market, waterfall).
+    /// Singleton manager για ambient ήχο υπόβαθρου.
+    /// Διαχειρίζεται αναπαραγωγή ενός looping ambient κομματιού και επιτρέπει volume ducking
+    /// όταν ο παίκτης εισέρχεται σε δυνατές ζώνες εγγύτητας (π.χ., αγορά, καταρράκτης).
     ///
-    /// Setup:
-    /// 1. Create an empty GameObject named "AmbientSoundManager"
-    /// 2. Add this script and AudioZoneDucker
-    /// 3. Add an AudioSource component
-    /// 4. Assign an ambient audio clip (birds, wind, village ambience)
-    /// 5. Configure baseVolume and minDuckedVolume
+    /// Ρύθμιση:
+    /// 1. Δημιουργήστε ένα κενό GameObject με όνομα "AmbientSoundManager"
+    /// 2. Προσθέστε αυτό το script και το AudioZoneDucker
+    /// 3. Προσθέστε ένα AudioSource component
+    /// 4. Αναθέστε ένα ambient audio clip (πουλιά, άνεμος, ατμόσφαιρα χωριού)
+    /// 5. Ρυθμίστε baseVolume και minDuckedVolume
     ///
-    /// The AudioZoneDucker calls SetDuckAmount() to lower ambient volume
-    /// when player is near loud audio zones.
-    /// </summary>
+    /// Το AudioZoneDucker καλεί SetDuckAmount() για να μειώσει την ένταση ambient
+    /// όταν ο παίκτης είναι κοντά σε δυνατές ζώνες ήχου.
     [RequireComponent(typeof(AudioSource))]
     public class AmbientSoundManager : MonoBehaviour
     {
-        //=============================================================================
-        // SINGLETON
-        //=============================================================================
-
-        /// <summary>
-        /// Singleton instance accessible from anywhere via AmbientSoundManager.Instance
-        /// </summary>
+        /// Singleton instance προσβάσιμο από οπουδήποτε μέσω AmbientSoundManager.Instance
         public static AmbientSoundManager Instance { get; private set; }
-
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
 
         [Header("Audio Source")]
 
-        /// <summary>
-        /// The AudioSource that plays the looping ambient track.
-        /// Should be set to Play On Awake and Loop.
-        /// </summary>
-        [Tooltip("AudioSource for ambient audio. Auto-found if not assigned.")]
+        /// Το AudioSource που παίζει το looping ambient κομμάτι.
+        /// Πρέπει να έχει ρυθμιστεί σε Play On Awake και Loop.
+        [Tooltip("AudioSource για ambient ήχο. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource ambientAudioSource;
 
         [Header("Volume Settings")]
 
-        /// <summary>
-        /// The base volume when no ducking is applied.
-        /// This is the "normal" ambient volume.
-        /// </summary>
-        [Tooltip("Normal ambient volume when not ducked.")]
+        /// Η βασική ένταση όταν δεν εφαρμόζεται ducking.
+        /// Αυτή είναι η "κανονική" ένταση ambient.
+        [Tooltip("Κανονική ένταση ambient όταν δεν γίνεται ducking.")]
         [Range(0f, 1f)]
         [SerializeField]
         private float baseVolume = 0.5f;
 
-        /// <summary>
-        /// The minimum volume when fully ducked (player is right next to a loud zone).
-        /// Ambient audio will lerp between baseVolume and this value.
-        /// </summary>
-        [Tooltip("Minimum volume when fully ducked by a loud zone.")]
+        /// Η ελάχιστη ένταση όταν γίνεται πλήρες ducking (ο παίκτης είναι ακριβώς δίπλα σε δυνατή ζώνη).
+        /// Ο ambient ήχος κάνει lerp μεταξύ baseVolume και αυτής της τιμής.
+        [Tooltip("Ελάχιστη ένταση όταν γίνεται πλήρες ducking από δυνατή ζώνη.")]
         [Range(0f, 1f)]
         [SerializeField]
         private float minDuckedVolume = 0.1f;
 
-        /// <summary>
-        /// How fast the volume transitions when duck amount changes.
-        /// Higher values = faster transitions.
-        /// </summary>
-        [Tooltip("Speed of volume transitions (higher = faster).")]
+        /// Πόσο γρήγορα μεταβαίνει η ένταση όταν αλλάζει το duck amount.
+        /// Υψηλότερες τιμές = ταχύτερες μεταβάσεις.
+        [Tooltip("Ταχύτητα μεταβάσεων έντασης (υψηλότερο = ταχύτερο).")]
         [Range(1f, 20f)]
         [SerializeField]
         private float duckLerpSpeed = 5f;
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
-
-        /// <summary>
-        /// The current duck amount (0 = no ducking, 1 = fully ducked).
-        /// Set by AudioZoneDucker based on proximity to loud zones.
-        /// </summary>
+        /// Το τρέχον duck amount (0 = χωρίς ducking, 1 = πλήρες ducking).
+        /// Ορίζεται από τον AudioZoneDucker βάσει εγγύτητας σε δυνατές ζώνες.
         private float currentDuckAmount;
 
-        /// <summary>
-        /// Target duck amount we're lerping towards.
-        /// Smooths out sudden volume changes.
-        /// </summary>
+        /// Το duck amount-στόχος προς το οποίο κάνουμε lerp.
+        /// Εξομαλύνει τις απότομες αλλαγές έντασης.
         private float targetDuckAmount;
 
-        /// <summary>
-        /// The current actual volume being applied to the AudioSource.
-        /// Calculated from baseVolume and duck amount.
-        /// </summary>
+        /// Η τρέχουσα πραγματική ένταση που εφαρμόζεται στο AudioSource.
+        /// Υπολογίζεται από baseVolume και duck amount.
         private float currentVolume;
-
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
 
         private void Awake()
         {
-            // Singleton setup - ensure only one instance exists
+            // Ρύθμιση singleton - διασφαλίζει ότι υπάρχει μόνο ένα instance
             if (Instance != null && Instance != this)
             {
-                Debug.LogWarning("[AmbientSoundManager] Duplicate instance found. Destroying this one.");
+                Debug.LogWarning("[AmbientSoundManager] Βρέθηκε διπλό instance. Καταστρέφεται αυτό.");
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
 
-            // Find AudioSource if not assigned
+            // Εύρεση AudioSource αν δεν ανατέθηκε
             if (ambientAudioSource == null)
             {
                 ambientAudioSource = GetComponent<AudioSource>();
             }
 
-            // Configure AudioSource for ambient playback
+            // Ρύθμιση AudioSource για ambient αναπαραγωγή
             if (ambientAudioSource != null)
             {
                 ambientAudioSource.loop = true;
@@ -123,7 +89,7 @@ namespace MyProject.Audio
                 ambientAudioSource.volume = baseVolume;
                 currentVolume = baseVolume;
 
-                // Start playing if not already
+                // Έναρξη αναπαραγωγής αν δεν παίζει ήδη
                 if (!ambientAudioSource.isPlaying && ambientAudioSource.clip != null)
                 {
                     ambientAudioSource.Play();
@@ -131,20 +97,20 @@ namespace MyProject.Audio
             }
             else
             {
-                Debug.LogError("[AmbientSoundManager] No AudioSource found!");
+                Debug.LogError("[AmbientSoundManager] Δεν βρέθηκε AudioSource!");
             }
         }
 
         private void Update()
         {
-            // Smoothly lerp the duck amount towards target
+            // Ομαλό lerp του duck amount προς τον στόχο
             currentDuckAmount = Mathf.Lerp(currentDuckAmount, targetDuckAmount, duckLerpSpeed * Time.deltaTime);
 
-            // Calculate target volume based on duck amount
-            // Duck amount of 0 = baseVolume, duck amount of 1 = minDuckedVolume
+            // Υπολογισμός έντασης-στόχου βάσει duck amount
+            // Duck amount 0 = baseVolume, duck amount 1 = minDuckedVolume
             float targetVolume = Mathf.Lerp(baseVolume, minDuckedVolume, currentDuckAmount);
 
-            // Apply volume to AudioSource
+            // Εφαρμογή έντασης στο AudioSource
             if (ambientAudioSource != null)
             {
                 ambientAudioSource.volume = targetVolume;
@@ -154,32 +120,24 @@ namespace MyProject.Audio
 
         private void OnDestroy()
         {
-            // Clear singleton reference when destroyed
+            // Καθαρισμός αναφοράς singleton όταν καταστραφεί
             if (Instance == this)
             {
                 Instance = null;
             }
         }
 
-        //=============================================================================
-        // PUBLIC METHODS
-        //=============================================================================
-
-        /// <summary>
-        /// Sets the target duck amount. Called by AudioZoneDucker.
-        /// </summary>
-        /// <param name="amount">Duck amount from 0 (no ducking) to 1 (fully ducked).</param>
+        /// Ορίζει το duck amount-στόχο. Καλείται από τον AudioZoneDucker.
+        /// <param name="amount">Duck amount από 0 (χωρίς ducking) έως 1 (πλήρες ducking).</param>
         public void SetDuckAmount(float amount)
         {
-            // Clamp to valid range
+            // Περιορισμός σε έγκυρο εύρος
             targetDuckAmount = Mathf.Clamp01(amount);
         }
 
-        /// <summary>
-        /// Immediately sets the ambient volume without ducking calculations.
-        /// Useful for initialization or cutscenes.
-        /// </summary>
-        /// <param name="volume">Volume to set (0-1).</param>
+        /// Ορίζει αμέσως την ένταση ambient χωρίς υπολογισμούς ducking.
+        /// Χρήσιμο για αρχικοποίηση ή cutscenes.
+        /// <param name="volume">Ένταση προς ρύθμιση (0-1).</param>
         public void SetVolumeImmediate(float volume)
         {
             if (ambientAudioSource != null)
@@ -189,23 +147,13 @@ namespace MyProject.Audio
             }
         }
 
-        //=============================================================================
-        // PROPERTIES
-        //=============================================================================
-
-        /// <summary>
-        /// Gets the current ambient volume (after ducking applied).
-        /// </summary>
+        /// Επιστρέφει την τρέχουσα ένταση ambient (μετά την εφαρμογή ducking).
         public float CurrentVolume => currentVolume;
 
-        /// <summary>
-        /// Gets the base (un-ducked) volume.
-        /// </summary>
+        /// Επιστρέφει τη βασική (χωρίς ducking) ένταση.
         public float BaseVolume => baseVolume;
 
-        /// <summary>
-        /// Gets the current duck amount (0-1).
-        /// </summary>
+        /// Επιστρέφει το τρέχον duck amount (0-1).
         public float CurrentDuckAmount => currentDuckAmount;
     }
 }

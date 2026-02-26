@@ -2,50 +2,38 @@ using UnityEngine;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// Interface for all interactable objects in the game.
-    /// Any object that the player can interact with must implement this interface.
-    /// The Interactor script detects objects implementing IInteractable via raycast
-    /// and calls the appropriate methods based on player input and gaze direction.
+    /// Interface για όλα τα αλληλεπιδραστικά αντικείμενα στο παιχνίδι.
+    /// Κάθε αντικείμενο με το οποίο μπορεί να αλληλεπιδράσει ο παίκτης πρέπει να υλοποιεί αυτό το interface.
+    /// Το Interactor script ανιχνεύει αντικείμενα που υλοποιούν το IInteractable μέσω raycast
+    /// και καλεί τις κατάλληλες μεθόδους βάσει του input του παίκτη και της κατεύθυνσης του βλέμματος.
     ///
-    /// Lifecycle:
-    /// 1. Player looks at object → OnReadyInteract()
-    /// 2. Player presses Interact → OnInteract(interactor)
-    /// 3. Player releases/cancels → OnEndInteract()
-    /// 4. Player looks away → OnAbortInteract()
-    /// </summary>
+    /// Κύκλος ζωής:
+    /// 1. Ο παίκτης κοιτάζει το αντικείμενο → OnReadyInteract()
+    /// 2. Ο παίκτης πατάει Interact → OnInteract(interactor)
+    /// 3. Ο παίκτης αφήνει/ακυρώνει → OnEndInteract()
+    /// 4. Ο παίκτης κοιτάζει αλλού → OnAbortInteract()
     public interface IInteractable
     {
-        /// <summary>
-        /// The text shown to the player when looking at this object.
-        /// Example: "Read Sign", "Open Door", "Pull Lever"
-        /// This property allows the Interactor to display context-specific prompts.
-        /// </summary>
+        /// Το κείμενο που εμφανίζεται στον παίκτη όταν κοιτάζει αυτό το αντικείμενο.
+        /// Παράδειγμα: "Διάβασε Πινακίδα", "Άνοιξε Πόρτα", "Τράβα Μοχλό"
+        /// Αυτή η ιδιότητα επιτρέπει στον Interactor να εμφανίζει prompts ανάλογα με το context.
         string InteractionPrompt { get; }
 
-        /// <summary>
-        /// Called when the player presses the interact button while looking at this object.
-        /// The Interactor reference allows the object to send data back (e.g., text messages).
-        /// </summary>
-        /// <param name="interactor">Reference to the Interactor that initiated the interaction.</param>
+        /// Καλείται όταν ο παίκτης πατήσει το κουμπί αλληλεπίδρασης ενώ κοιτάζει αυτό το αντικείμενο.
+        /// Η αναφορά στον Interactor επιτρέπει στο αντικείμενο να στείλει δεδομένα πίσω (π.χ. μηνύματα κειμένου).
+        /// <param name="interactor">Αναφορά στον Interactor που ξεκίνησε την αλληλεπίδραση.</param>
         void OnInteract(Interactor interactor);
 
-        /// <summary>
-        /// Called when an active interaction ends, either by player input or forced cancellation.
-        /// Use this to clean up any interaction state (e.g., close UI, stop animations).
-        /// </summary>
+        /// Καλείται όταν τελειώνει μια ενεργή αλληλεπίδραση, είτε από input του παίκτη είτε από αναγκαστική ακύρωση.
+        /// Χρησιμοποιήστε το για καθαρισμό κατάστασης αλληλεπίδρασης (π.χ. κλείσιμο UI, διακοπή animations).
         void OnEndInteract();
 
-        /// <summary>
-        /// Called when the player's gaze enters this object (ready to interact).
-        /// Use this to show visual feedback indicating the object can be interacted with.
-        /// </summary>
+        /// Καλείται όταν το βλέμμα του παίκτη εισέρχεται σε αυτό το αντικείμενο (έτοιμο για αλληλεπίδραση).
+        /// Χρησιμοποιήστε το για να δείξετε οπτική ένδειξη ότι το αντικείμενο μπορεί να αλληλεπιδράσει.
         void OnReadyInteract();
 
-        /// <summary>
-        /// Called when the player's gaze leaves this object before interacting.
-        /// Use this to hide any visual feedback shown in OnReadyInteract().
-        /// </summary>
+        /// Καλείται όταν το βλέμμα του παίκτη φεύγει από αυτό το αντικείμενο πριν την αλληλεπίδραση.
+        /// Χρησιμοποιήστε το για να κρύψετε οποιαδήποτε οπτική ένδειξη εμφανίστηκε στο OnReadyInteract().
         void OnAbortInteract();
     }
 }

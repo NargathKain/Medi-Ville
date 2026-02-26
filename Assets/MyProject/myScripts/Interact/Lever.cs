@@ -3,192 +3,139 @@ using UnityEngine;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// An interactable lever that controls a CastleGate (or other mechanism).
-    /// When pulled, the lever rotates and triggers the connected gate to raise/lower.
+    /// Ένας αλληλεπιδραστικός μοχλός που ελέγχει ένα CastleGate (ή άλλο μηχανισμό).
+    /// Όταν τραβηχτεί, ο μοχλός περιστρέφεται και ενεργοποιεί τη συνδεδεμένη πύλη να ανέβει/κατέβει.
     ///
-    /// Setup:
-    /// 1. Attach this script to the lever GameObject
-    /// 2. Add a Collider for raycast detection
-    /// 3. Tag as "Interactable"
-    /// 4. Assign the lever handle Transform (the part that rotates)
-    /// 5. Assign the CastleGate reference to control
-    /// 6. Configure rotation angle and speed
+    /// Ρύθμιση:
+    /// 1. Προσθέστε αυτό το script στο μοχλό GameObject
+    /// 2. Προσθέστε ένα Collider για ανίχνευση raycast
+    /// 3. Βάλτε tag ως "Interactable"
+    /// 4. Αναθέστε το Transform της λαβής του μοχλού (το μέρος που περιστρέφεται)
+    /// 5. Αναθέστε την αναφορά CastleGate για έλεγχο
+    /// 6. Ρυθμίστε γωνία περιστροφής και ταχύτητα
     ///
-    /// The lever can control any object with a CastleGate component,
-    /// or you can extend it to control other mechanisms via UnityEvents.
-    /// </summary>
+    /// Ο μοχλός μπορεί να ελέγξει οποιοδήποτε αντικείμενο με component CastleGate,
+    /// ή μπορείτε να τον επεκτείνετε για έλεγχο άλλων μηχανισμών μέσω UnityEvents.
     public class Lever : MonoBehaviour, IInteractable
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
 
         [Header("Visual Feedback")]
 
-        /// <summary>
-        /// Optional indicator shown when player can interact with the lever.
-        /// </summary>
-        [Tooltip("Visual indicator shown when player can interact.")]
+        /// Προαιρετική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει με τον μοχλό.
+        [Tooltip("Οπτική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει.")]
         [SerializeField]
         private GameObject indicator;
 
         [Header("Lever Handle")]
 
-        /// <summary>
-        /// The lever handle Transform that rotates when pulled.
-        /// If not assigned, the script will rotate this GameObject.
-        /// </summary>
-        [Tooltip("The lever handle that rotates. Uses this object if not assigned.")]
+        /// Το Transform της λαβής του μοχλού που περιστρέφεται όταν τραβιέται.
+        /// Αν δεν ανατεθεί, το script θα περιστρέψει αυτό το GameObject.
+        [Tooltip("Η λαβή του μοχλού που περιστρέφεται. Χρησιμοποιεί αυτό το αντικείμενο αν δεν ανατεθεί.")]
         [SerializeField]
         private Transform leverHandle;
 
-        /// <summary>
-        /// The rotation angle when the lever is pulled (in degrees).
-        /// Positive or negative depending on desired direction.
-        /// </summary>
-        [Tooltip("Rotation angle when lever is pulled (degrees).")]
+        /// Η γωνία περιστροφής όταν ο μοχλός τραβιέται (σε μοίρες).
+        /// Θετική ή αρνητική ανάλογα με την επιθυμητή κατεύθυνση.
+        [Tooltip("Γωνία περιστροφής όταν ο μοχλός τραβιέται (μοίρες).")]
         [SerializeField]
         private float pullAngle = 45f;
 
-        /// <summary>
-        /// How fast the lever rotates in degrees per second.
-        /// </summary>
-        [Tooltip("Lever rotation speed (degrees per second).")]
+        /// Πόσο γρήγορα περιστρέφεται ο μοχλός σε μοίρες ανά δευτερόλεπτο.
+        [Tooltip("Ταχύτητα περιστροφής μοχλού (μοίρες ανά δευτερόλεπτο).")]
         [SerializeField]
         private float rotationSpeed = 90f;
 
-        /// <summary>
-        /// The axis around which the lever rotates.
-        /// Default is X-axis (forward/backward pull).
-        /// </summary>
-        [Tooltip("Local rotation axis for the lever.")]
+        /// Ο άξονας γύρω από τον οποίο περιστρέφεται ο μοχλός.
+        /// Προεπιλογή είναι ο X-άξονας (τράβηγμα μπρος/πίσω).
+        [Tooltip("Τοπικός άξονας περιστροφής για τον μοχλό.")]
         [SerializeField]
         private Vector3 rotationAxis = Vector3.right;
 
         [Header("Connected Gate")]
 
-        /// <summary>
-        /// Reference to the CastleGate this lever controls.
-        /// When the lever is pulled, the gate raises/lowers.
-        /// </summary>
-        [Tooltip("The CastleGate this lever controls.")]
+        /// Αναφορά στο CastleGate που ελέγχει αυτός ο μοχλός.
+        /// Όταν ο μοχλός τραβιέται, η πύλη ανεβαίνει/κατεβαίνει.
+        [Tooltip("Το CastleGate που ελέγχει αυτός ο μοχλός.")]
         [SerializeField]
         private CastleGate connectedGate;
 
         [Header("Behavior")]
 
-        /// <summary>
-        /// If true, the lever toggles between pulled/unpulled states.
-        /// If false, the lever returns to unpulled position automatically.
-        /// </summary>
-        [Tooltip("If true, lever stays in pulled position until pulled again.")]
+        /// Αν είναι true, ο μοχλός εναλλάσσεται μεταξύ τραβηγμένης/μη τραβηγμένης κατάστασης.
+        /// Αν είναι false, ο μοχλός επιστρέφει στη μη τραβηγμένη θέση αυτόματα.
+        [Tooltip("Αν είναι true, ο μοχλός μένει στην τραβηγμένη θέση μέχρι να τραβηχτεί ξανά.")]
         [SerializeField]
         private bool toggleMode = true;
 
-        /// <summary>
-        /// Delay before the gate starts moving after the lever is pulled.
-        /// Creates a more realistic mechanical feel.
-        /// </summary>
-        [Tooltip("Delay before gate moves after lever is pulled (seconds).")]
+        /// Καθυστέρηση πριν αρχίσει να κινείται η πύλη μετά το τράβηγμα του μοχλού.
+        /// Δημιουργεί πιο ρεαλιστική μηχανική αίσθηση.
+        [Tooltip("Καθυστέρηση πριν κινηθεί η πύλη μετά το τράβηγμα του μοχλού (δευτερόλεπτα).")]
         [SerializeField]
         private float gateActivationDelay = 0.2f;
 
         [Header("Audio (Optional)")]
 
-        /// <summary>
-        /// Sound played when the lever is pulled.
-        /// </summary>
-        [Tooltip("Sound when lever is pulled.")]
+        /// Ήχος που παίζει όταν ο μοχλός τραβιέται.
+        [Tooltip("Ήχος όταν ο μοχλός τραβιέται.")]
         [SerializeField]
         private AudioClip pullSound;
 
-        /// <summary>
-        /// AudioSource for playing sounds.
-        /// </summary>
-        [Tooltip("AudioSource for sounds. Auto-found if not assigned.")]
+        /// AudioSource για αναπαραγωγή ήχων.
+        [Tooltip("AudioSource για ήχους. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource audioSource;
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
-
-        /// <summary>
-        /// Tracks whether the lever is in the pulled position.
-        /// </summary>
+        /// Παρακολουθεί αν ο μοχλός είναι στην τραβηγμένη θέση.
         private bool isPulled = false;
 
-        /// <summary>
-        /// Tracks whether the lever is currently animating.
-        /// </summary>
+        /// Παρακολουθεί αν ο μοχλός κινείται αυτή τη στιγμή.
         private bool isMoving = false;
 
-        /// <summary>
-        /// The lever's initial (unpulled) rotation.
-        /// </summary>
+        /// Η αρχική (μη τραβηγμένη) περιστροφή του μοχλού.
         private Quaternion unpulledRotation;
 
-        /// <summary>
-        /// The lever's pulled rotation.
-        /// </summary>
+        /// Η τραβηγμένη περιστροφή του μοχλού.
         private Quaternion pulledRotation;
 
-        /// <summary>
-        /// Reference to the current animation coroutine.
-        /// </summary>
+        /// Αναφορά στο τρέχον coroutine animation.
         private Coroutine animationCoroutine;
 
-        /// <summary>
-        /// The Transform that actually rotates (handle or self).
-        /// </summary>
+        /// Το Transform που πραγματικά περιστρέφεται (λαβή ή εαυτός).
         private Transform rotatingPart;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
-
-        /// <summary>
-        /// Initializes lever rotations and validates setup.
-        /// </summary>
+        /// Αρχικοποιεί περιστροφές μοχλού και επικυρώνει τη ρύθμιση.
         private void Awake()
         {
-            // Determine which transform rotates
+            // Καθορισμός ποιο transform περιστρέφεται
             rotatingPart = leverHandle != null ? leverHandle : transform;
 
-            // Store initial rotation
+            // Αποθήκευση αρχικής περιστροφής
             unpulledRotation = rotatingPart.localRotation;
 
-            // Calculate pulled rotation
+            // Υπολογισμός τραβηγμένης περιστροφής
             pulledRotation = unpulledRotation * Quaternion.AngleAxis(pullAngle, rotationAxis);
 
-            // Find AudioSource if not assigned
+            // Εύρεση AudioSource αν δεν ανατέθηκε
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
             }
 
-            // Validate gate reference
+            // Επικύρωση αναφοράς πύλης
             if (connectedGate == null)
             {
-                Debug.LogWarning($"[Lever] {gameObject.name}: No CastleGate assigned! " +
-                                "Lever will animate but won't control anything.");
+                Debug.LogWarning($"[Lever] {gameObject.name}: Δεν ανατέθηκε CastleGate! " +
+                                "Ο μοχλός θα κινείται αλλά δεν θα ελέγχει τίποτα.");
             }
         }
 
-        //=============================================================================
-        // IINTERACTABLE IMPLEMENTATION
-        //=============================================================================
-
-        /// <summary>
-        /// The prompt shown to the player.
-        /// Changes based on lever state and gate state.
-        /// </summary>
+        /// Το prompt που εμφανίζεται στον παίκτη.
+        /// Αλλάζει ανάλογα με την κατάσταση μοχλού και πύλης.
         public string InteractionPrompt
         {
             get
             {
-                // Don't allow interaction while lever or gate is moving
+                // Μην επιτρέπεις αλληλεπίδραση ενώ ο μοχλός ή η πύλη κινείται
                 if (isMoving || (connectedGate != null && connectedGate.IsMoving))
                 {
                     return "";
@@ -205,26 +152,24 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Called when player interacts with the lever.
-        /// Pulls (or pushes) the lever and activates the connected gate.
-        /// </summary>
-        /// <param name="interactor">The Interactor that initiated interaction.</param>
+        /// Καλείται όταν ο παίκτης αλληλεπιδρά με τον μοχλό.
+        /// Τραβάει (ή σπρώχνει) τον μοχλό και ενεργοποιεί τη συνδεδεμένη πύλη.
+        /// <param name="interactor">Ο Interactor που ξεκίνησε την αλληλεπίδραση.</param>
         public void OnInteract(Interactor interactor)
         {
-            // Don't allow interaction while moving
+            // Μην επιτρέπεις αλληλεπίδραση ενώ κινείται
             if (isMoving)
             {
                 return;
             }
 
-            // Don't allow interaction while gate is moving
+            // Μην επιτρέπεις αλληλεπίδραση ενώ η πύλη κινείται
             if (connectedGate != null && connectedGate.IsMoving)
             {
                 return;
             }
 
-            // Toggle or pull based on mode
+            // Εναλλαγή ή τράβηγμα ανάλογα με τη λειτουργία
             if (toggleMode)
             {
                 if (isPulled)
@@ -238,25 +183,21 @@ namespace MyProject.Interact
             }
             else
             {
-                // Non-toggle mode: pull then auto-return
+                // Λειτουργία χωρίς toggle: τράβηξε και μετά αυτόματη επιστροφή
                 Pull();
             }
 
-            // End interaction immediately
+            // Τερμάτισε την αλληλεπίδραση αμέσως
             interactor.EndInteract(this);
         }
 
-        /// <summary>
-        /// Called when interaction ends.
-        /// </summary>
+        /// Καλείται όταν τελειώνει η αλληλεπίδραση.
         public void OnEndInteract()
         {
-            // No cleanup needed
+            // Δεν χρειάζεται καθαρισμός
         }
 
-        /// <summary>
-        /// Called when player looks away from the lever.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης κοιτάξει αλλού από τον μοχλό.
         public void OnAbortInteract()
         {
             if (indicator != null)
@@ -265,12 +206,10 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Called when player starts looking at the lever.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης αρχίσει να κοιτάζει τον μοχλό.
         public void OnReadyInteract()
         {
-            // Don't show indicator if lever or gate is moving
+            // Μην εμφανίσεις ένδειξη αν ο μοχλός ή η πύλη κινείται
             if (isMoving || (connectedGate != null && connectedGate.IsMoving))
             {
                 return;
@@ -282,13 +221,7 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // LEVER OPERATIONS
-        //=============================================================================
-
-        /// <summary>
-        /// Pulls the lever to the activated position.
-        /// </summary>
+        /// Τραβάει τον μοχλό στην ενεργοποιημένη θέση.
         public void Pull()
         {
             if (isPulled || isMoving)
@@ -300,9 +233,7 @@ namespace MyProject.Interact
             animationCoroutine = StartCoroutine(AnimateLever(pulledRotation, true));
         }
 
-        /// <summary>
-        /// Pushes the lever back to the deactivated position.
-        /// </summary>
+        /// Σπρώχνει τον μοχλό πίσω στην απενεργοποιημένη θέση.
         public void Push()
         {
             if (!isPulled || isMoving)
@@ -314,21 +245,15 @@ namespace MyProject.Interact
             animationCoroutine = StartCoroutine(AnimateLever(unpulledRotation, false));
         }
 
-        //=============================================================================
-        // COROUTINES
-        //=============================================================================
-
-        /// <summary>
-        /// Animates the lever rotation and triggers the gate.
-        /// </summary>
-        /// <param name="targetRotation">Target rotation for the lever.</param>
-        /// <param name="pulling">True if pulling, false if pushing.</param>
-        /// <returns>IEnumerator for coroutine.</returns>
+        /// Κινεί τον μοχλό και ενεργοποιεί την πύλη.
+        /// <param name="targetRotation">Περιστροφή-στόχος για τον μοχλό.</param>
+        /// <param name="pulling">True αν τραβάει, false αν σπρώχνει.</param>
+        /// <returns>IEnumerator για coroutine.</returns>
         private IEnumerator AnimateLever(Quaternion targetRotation, bool pulling)
         {
             isMoving = true;
 
-            // Animate lever rotation
+            // Animation περιστροφής μοχλού
             while (Quaternion.Angle(rotatingPart.localRotation, targetRotation) > 0.1f)
             {
                 rotatingPart.localRotation = Quaternion.RotateTowards(
@@ -339,26 +264,26 @@ namespace MyProject.Interact
                 yield return null;
             }
 
-            // Snap to exact rotation
+            // Κούμπωμα στην ακριβή περιστροφή
             rotatingPart.localRotation = targetRotation;
 
-            // Update state
+            // Ενημέρωση κατάστασης
             isPulled = pulling;
             isMoving = false;
 
-            // Wait before activating gate (mechanical delay)
+            // Αναμονή πριν ενεργοποιηθεί η πύλη (μηχανική καθυστέρηση)
             if (gateActivationDelay > 0)
             {
                 yield return new WaitForSeconds(gateActivationDelay);
             }
 
-            // Activate the connected gate
+            // Ενεργοποίηση της συνδεδεμένης πύλης
             ActivateGate(pulling);
 
-            // For non-toggle mode, return lever to unpulled position after gate finishes
+            // Για λειτουργία χωρίς toggle, επέστρεψε τον μοχλό στη μη τραβηγμένη θέση μετά το τέλος της πύλης
             if (!toggleMode && pulling)
             {
-                // Wait for gate to finish moving
+                // Περίμενε να τελειώσει η κίνηση της πύλης
                 if (connectedGate != null)
                 {
                     while (connectedGate.IsMoving)
@@ -367,16 +292,14 @@ namespace MyProject.Interact
                     }
                 }
 
-                // Return lever to unpulled position
+                // Επιστροφή μοχλού στη μη τραβηγμένη θέση
                 yield return new WaitForSeconds(0.5f);
                 Push();
             }
         }
 
-        /// <summary>
-        /// Activates the connected gate based on lever state.
-        /// </summary>
-        /// <param name="pulled">True if lever was pulled, false if pushed.</param>
+        /// Ενεργοποιεί τη συνδεδεμένη πύλη ανάλογα με την κατάσταση του μοχλού.
+        /// <param name="pulled">True αν ο μοχλός τραβήχτηκε, false αν σπρώχτηκε.</param>
         private void ActivateGate(bool pulled)
         {
             if (connectedGate == null)
@@ -386,24 +309,18 @@ namespace MyProject.Interact
 
             if (pulled)
             {
-                // Lever pulled - raise the gate
+                // Ο μοχλός τραβήχτηκε - ανέβασε την πύλη
                 connectedGate.Raise();
             }
             else
             {
-                // Lever pushed - lower the gate
+                // Ο μοχλός σπρώχτηκε - κατέβασε την πύλη
                 connectedGate.Lower();
             }
         }
 
-        //=============================================================================
-        // AUDIO
-        //=============================================================================
-
-        /// <summary>
-        /// Plays a sound clip.
-        /// </summary>
-        /// <param name="clip">The clip to play.</param>
+        /// Αναπαράγει ένα ηχητικό clip.
+        /// <param name="clip">Το clip προς αναπαραγωγή.</param>
         private void PlaySound(AudioClip clip)
         {
             if (audioSource != null && clip != null)
@@ -412,18 +329,10 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // PUBLIC ACCESSORS
-        //=============================================================================
-
-        /// <summary>
-        /// Returns whether the lever is currently pulled.
-        /// </summary>
+        /// Επιστρέφει αν ο μοχλός είναι τώρα τραβηγμένος.
         public bool IsPulled => isPulled;
 
-        /// <summary>
-        /// Returns whether the lever is currently animating.
-        /// </summary>
+        /// Επιστρέφει αν ο μοχλός κινείται τώρα.
         public bool IsMoving => isMoving;
     }
 }

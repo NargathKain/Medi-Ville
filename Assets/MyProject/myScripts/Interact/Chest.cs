@@ -3,215 +3,159 @@ using UnityEngine;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// An interactable chest that opens its lid when the player interacts.
-    /// The lid rotates around a pivot point to simulate opening/closing.
+    /// Ένα αλληλεπιδραστικό μπαούλο που ανοίγει το καπάκι του όταν ο παίκτης αλληλεπιδρά.
+    /// Το καπάκι περιστρέφεται γύρω από ένα σημείο pivot για να προσομοιώσει άνοιγμα/κλείσιμο.
     ///
-    /// Setup:
-    /// 1. Create a chest model with a separate lid object as a child
-    /// 2. Position the lid's pivot point at the hinge (back edge of lid)
-    /// 3. Attach this script to the chest body (with the collider)
-    /// 4. Assign the lid Transform reference
-    /// 5. Tag the chest as "Interactable"
+    /// Ρύθμιση:
+    /// 1. Δημιουργήστε ένα μοντέλο μπαούλου με ξεχωριστό αντικείμενο καπάκι ως child
+    /// 2. Τοποθετήστε το pivot point του καπακιού στον μεντεσέ (πίσω άκρη του καπακιού)
+    /// 3. Προσθέστε αυτό το script στο σώμα του μπαούλου (με το collider)
+    /// 4. Αναθέστε την αναφορά Transform του καπακιού
+    /// 5. Βάλτε tag στο μπαούλο ως "Interactable"
     ///
-    /// Hierarchy example:
-    ///   Chest (this script + collider)
-    ///   └── Lid (Transform reference)
-    /// </summary>
+    /// Παράδειγμα ιεραρχίας:
+    ///   Chest (αυτό το script + collider)
+    ///   └── Lid (αναφορά Transform)
     public class Chest : MonoBehaviour, IInteractable
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
-
         [Header("Visual Feedback")]
 
-        /// <summary>
-        /// Optional indicator shown when player can interact with the chest.
-        /// </summary>
-        [Tooltip("Visual indicator shown when player can interact.")]
+        /// Προαιρετική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει με το μπαούλο.
+        [Tooltip("Οπτική ένδειξη που εμφανίζεται όταν ο παίκτης μπορεί να αλληλεπιδράσει.")]
         [SerializeField]
         private GameObject indicator;
 
         [Header("Lid Settings")]
 
-        /// <summary>
-        /// Reference to the chest lid Transform that will rotate when opened.
-        /// This should be a child object with its pivot at the hinge point.
-        /// </summary>
-        [Tooltip("The lid Transform that rotates when chest opens.")]
+        /// Αναφορά στο Transform του καπακιού που θα περιστραφεί όταν ανοίξει.
+        /// Αυτό πρέπει να είναι ένα child object με το pivot του στο σημείο του μεντεσέ.
+        [Tooltip("Το Transform του καπακιού που περιστρέφεται όταν το μπαούλο ανοίγει.")]
         [SerializeField]
         private Transform lid;
 
-        /// <summary>
-        /// The angle the lid rotates when opened (in degrees).
-        /// Positive values typically rotate the lid backwards.
-        /// </summary>
-        [Tooltip("Rotation angle when lid opens (degrees).")]
+        /// Η γωνία που περιστρέφεται το καπάκι όταν ανοίγει (σε μοίρες).
+        /// Θετικές τιμές συνήθως περιστρέφουν το καπάκι προς τα πίσω.
+        [Tooltip("Γωνία περιστροφής όταν το καπάκι ανοίγει (μοίρες).")]
         [SerializeField]
         private float openAngle = -110f;
 
-        /// <summary>
-        /// How fast the lid rotates in degrees per second.
-        /// </summary>
-        [Tooltip("Lid rotation speed (degrees per second).")]
+        /// Πόσο γρήγορα περιστρέφεται το καπάκι σε μοίρες ανά δευτερόλεπτο.
+        [Tooltip("Ταχύτητα περιστροφής καπακιού (μοίρες ανά δευτερόλεπτο).")]
         [SerializeField]
         private float rotationSpeed = 180f;
 
-        /// <summary>
-        /// The local axis around which the lid rotates.
-        /// Default is X-axis for a lid that opens backward.
-        /// </summary>
-        [Tooltip("Local axis of lid rotation.")]
+        /// Ο τοπικός άξονας γύρω από τον οποίο περιστρέφεται το καπάκι.
+        /// Προεπιλογή είναι ο X-άξονας για καπάκι που ανοίγει προς τα πίσω.
+        [Tooltip("Τοπικός άξονας περιστροφής καπακιού.")]
         [SerializeField]
         private Vector3 rotationAxis = Vector3.right;
 
         [Header("Chest Content (Optional)")]
 
-        /// <summary>
-        /// Text displayed when the chest is opened.
-        /// Can describe what's inside the chest.
-        /// </summary>
-        [Tooltip("Optional message shown when chest is opened.")]
+        /// Κείμενο που εμφανίζεται όταν το μπαούλο ανοίγει.
+        /// Μπορεί να περιγράφει τι υπάρχει μέσα στο μπαούλο.
+        [Tooltip("Προαιρετικό μήνυμα που εμφανίζεται όταν το μπαούλο ανοίγει.")]
         [TextArea(2, 5)]
         [SerializeField]
         private string contentMessage = "";
 
-        /// <summary>
-        /// If true, the chest can only be opened once and stays open.
-        /// </summary>
-        [Tooltip("If true, chest stays open permanently after first interaction.")]
+        /// Αν είναι true, το μπαούλο μπορεί να ανοιχτεί μόνο μία φορά και μένει ανοιχτό.
+        [Tooltip("Αν είναι true, το μπαούλο μένει ανοιχτό μόνιμα μετά την πρώτη αλληλεπίδραση.")]
         [SerializeField]
         private bool oneTimeOnly = false;
 
         [Header("Audio (Optional)")]
 
-        /// <summary>
-        /// Sound played when the chest opens.
-        /// </summary>
-        [Tooltip("Sound played when chest opens.")]
+        /// Ήχος που παίζει όταν το μπαούλο ανοίγει.
+        [Tooltip("Ήχος που παίζει όταν το μπαούλο ανοίγει.")]
         [SerializeField]
         private AudioClip openSound;
 
-        /// <summary>
-        /// Sound played when the chest closes.
-        /// </summary>
-        [Tooltip("Sound played when chest closes.")]
+        /// Ήχος που παίζει όταν το μπαούλο κλείνει.
+        [Tooltip("Ήχος που παίζει όταν το μπαούλο κλείνει.")]
         [SerializeField]
         private AudioClip closeSound;
 
-        /// <summary>
-        /// AudioSource for playing sounds.
-        /// </summary>
-        [Tooltip("AudioSource for sounds. Auto-found if not assigned.")]
+        /// AudioSource για αναπαραγωγή ήχων.
+        [Tooltip("AudioSource για ήχους. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private AudioSource audioSource;
 
-        //=============================================================================
-        // PRIVATE FIELDS
-        //=============================================================================
-
-        /// <summary>
-        /// Tracks whether the chest is open or closed.
-        /// </summary>
+        /// Παρακολουθεί αν το μπαούλο είναι ανοιχτό ή κλειστό.
         private bool isOpen = false;
 
-        /// <summary>
-        /// Tracks whether the lid is currently animating.
-        /// </summary>
+        /// Παρακολουθεί αν το καπάκι κινείται αυτή τη στιγμή.
         private bool isMoving = false;
 
-        /// <summary>
-        /// Tracks whether the chest has been opened (for one-time chests).
-        /// </summary>
+        /// Παρακολουθεί αν το μπαούλο έχει ανοιχτεί (για μπαούλα μίας χρήσης).
         private bool hasBeenOpened = false;
 
-        /// <summary>
-        /// The lid's initial (closed) rotation.
-        /// </summary>
+        /// Η αρχική (κλειστή) περιστροφή του καπακιού.
         private Quaternion closedRotation;
 
-        /// <summary>
-        /// The lid's target rotation when open.
-        /// </summary>
+        /// Η περιστροφή-στόχος του καπακιού όταν είναι ανοιχτό.
         private Quaternion openRotation;
 
-        /// <summary>
-        /// Reference to the running animation coroutine.
-        /// </summary>
+        /// Αναφορά στο τρέχον coroutine animation.
         private Coroutine animationCoroutine;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
-
-        /// <summary>
-        /// Initializes lid rotations and validates setup.
-        /// </summary>
+        /// Αρχικοποιεί περιστροφές καπακιού και επικυρώνει τη ρύθμιση.
         private void Awake()
         {
-            // Validate lid reference
+            // Επικύρωση αναφοράς καπακιού
             if (lid == null)
             {
-                Debug.LogError($"[Chest] {gameObject.name}: Lid Transform not assigned!");
+                Debug.LogError($"[Chest] {gameObject.name}: Δεν έχει ανατεθεί το Transform του καπακιού!");
                 enabled = false;
                 return;
             }
 
-            // Store closed rotation
+            // Αποθήκευση κλειστής περιστροφής
             closedRotation = lid.localRotation;
 
-            // Calculate open rotation
+            // Υπολογισμός ανοιχτής περιστροφής
             openRotation = closedRotation * Quaternion.AngleAxis(openAngle, rotationAxis);
 
-            // Find AudioSource if not assigned
+            // Εύρεση AudioSource αν δεν ανατέθηκε
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
             }
         }
 
-        //=============================================================================
-        // IINTERACTABLE IMPLEMENTATION
-        //=============================================================================
-
-        /// <summary>
-        /// The prompt shown to the player.
-        /// Shows "Open Chest" or "Close Chest" based on state.
-        /// For one-time chests that are open, returns empty to disable further interaction.
-        /// </summary>
+        /// Το prompt που εμφανίζεται στον παίκτη.
+        /// Δείχνει "Open Chest" ή "Close Chest" ανάλογα με την κατάσταση.
+        /// Για μπαούλα μίας χρήσης που είναι ανοιχτά, επιστρέφει κενό για απενεργοποίηση περαιτέρω αλληλεπίδρασης.
         public string InteractionPrompt
         {
             get
             {
                 if (oneTimeOnly && hasBeenOpened)
                 {
-                    return ""; // No more interaction possible
+                    return ""; // Δεν είναι δυνατή άλλη αλληλεπίδραση
                 }
                 return isOpen ? "Close Chest" : "Open Chest";
             }
         }
 
-        /// <summary>
-        /// Called when player interacts with the chest.
-        /// Toggles the lid open/closed.
-        /// </summary>
-        /// <param name="interactor">The Interactor that initiated interaction.</param>
+        /// Καλείται όταν ο παίκτης αλληλεπιδρά με το μπαούλο.
+        /// Εναλλάσσει το καπάκι ανοιχτό/κλειστό.
+        /// <param name="interactor">Ο Interactor που ξεκίνησε την αλληλεπίδραση.</param>
         public void OnInteract(Interactor interactor)
         {
-            // Don't allow interaction while animating
+            // Μην επιτρέπεις αλληλεπίδραση κατά το animation
             if (isMoving)
             {
                 return;
             }
 
-            // Don't allow interaction if one-time chest already opened
+            // Μην επιτρέπεις αλληλεπίδραση αν το μπαούλο μίας χρήσης έχει ήδη ανοιχτεί
             if (oneTimeOnly && hasBeenOpened)
             {
                 return;
             }
 
-            // Toggle chest state
+            // Εναλλαγή κατάστασης μπαούλου
             if (isOpen)
             {
                 Close();
@@ -221,21 +165,17 @@ namespace MyProject.Interact
                 Open(interactor);
             }
 
-            // End interaction immediately
+            // Τερμάτισε την αλληλεπίδραση αμέσως
             interactor.EndInteract(this);
         }
 
-        /// <summary>
-        /// Called when interaction ends.
-        /// </summary>
+        /// Καλείται όταν τελειώνει η αλληλεπίδραση.
         public void OnEndInteract()
         {
-            // No cleanup needed - chest handles its own state
+            // Δεν χρειάζεται καθαρισμός - το μπαούλο διαχειρίζεται τη δική του κατάσταση
         }
 
-        /// <summary>
-        /// Called when player looks away from the chest.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης κοιτάξει αλλού από το μπαούλο.
         public void OnAbortInteract()
         {
             if (indicator != null)
@@ -244,12 +184,10 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Called when player starts looking at the chest.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης αρχίσει να κοιτάζει το μπαούλο.
         public void OnReadyInteract()
         {
-            // Don't show indicator for one-time chests that are already open
+            // Μην εμφανίσεις ένδειξη για μπαούλα μίας χρήσης που είναι ήδη ανοιχτά
             if (oneTimeOnly && hasBeenOpened)
             {
                 return;
@@ -261,14 +199,8 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // CHEST OPERATIONS
-        //=============================================================================
-
-        /// <summary>
-        /// Opens the chest lid.
-        /// </summary>
-        /// <param name="interactor">Optional interactor to receive content message when animation completes.</param>
+        /// Ανοίγει το καπάκι του μπαούλου.
+        /// <param name="interactor">Προαιρετικός interactor για λήψη μηνύματος περιεχομένου όταν ολοκληρωθεί το animation.</param>
         public void Open(Interactor interactor = null)
         {
             if (isOpen || isMoving)
@@ -280,9 +212,7 @@ namespace MyProject.Interact
             animationCoroutine = StartCoroutine(AnimateLid(openRotation, true, interactor));
         }
 
-        /// <summary>
-        /// Closes the chest lid.
-        /// </summary>
+        /// Κλείνει το καπάκι του μπαούλου.
         public void Close()
         {
             if (!isOpen || isMoving)
@@ -290,7 +220,7 @@ namespace MyProject.Interact
                 return;
             }
 
-            // Don't allow closing one-time chests
+            // Μην επιτρέπεις κλείσιμο μπαούλων μίας χρήσης
             if (oneTimeOnly && hasBeenOpened)
             {
                 return;
@@ -300,22 +230,16 @@ namespace MyProject.Interact
             animationCoroutine = StartCoroutine(AnimateLid(closedRotation, false, null));
         }
 
-        //=============================================================================
-        // COROUTINES
-        //=============================================================================
-
-        /// <summary>
-        /// Animates the lid rotation smoothly over time.
-        /// </summary>
-        /// <param name="targetRotation">Target rotation for the lid.</param>
-        /// <param name="opening">True if opening, false if closing.</param>
-        /// <param name="interactor">Interactor to receive content message (can be null).</param>
-        /// <returns>IEnumerator for coroutine.</returns>
+        /// Κινεί το καπάκι ομαλά με την πάροδο του χρόνου.
+        /// <param name="targetRotation">Περιστροφή-στόχος για το καπάκι.</param>
+        /// <param name="opening">True αν ανοίγει, false αν κλείνει.</param>
+        /// <param name="interactor">Interactor για λήψη μηνύματος περιεχομένου (μπορεί να είναι null).</param>
+        /// <returns>IEnumerator για coroutine.</returns>
         private IEnumerator AnimateLid(Quaternion targetRotation, bool opening, Interactor interactor)
         {
             isMoving = true;
 
-            // Animate until reaching target
+            // Animation μέχρι να φτάσει τον στόχο
             while (Quaternion.Angle(lid.localRotation, targetRotation) > 0.1f)
             {
                 lid.localRotation = Quaternion.RotateTowards(
@@ -326,19 +250,19 @@ namespace MyProject.Interact
                 yield return null;
             }
 
-            // Snap to exact rotation
+            // Κούμπωμα στην ακριβή περιστροφή
             lid.localRotation = targetRotation;
 
-            // Update state
+            // Ενημέρωση κατάστασης
             isOpen = opening;
             isMoving = false;
 
-            // Mark as opened for one-time chests
+            // Σημείωση ως ανοιγμένο για μπαούλα μίας χρήσης
             if (opening)
             {
                 hasBeenOpened = true;
 
-                // Show content message if available
+                // Εμφάνιση μηνύματος περιεχομένου αν υπάρχει
                 if (!string.IsNullOrEmpty(contentMessage) && interactor != null)
                 {
                     interactor.ReceiveInteract(contentMessage);
@@ -346,14 +270,8 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // AUDIO
-        //=============================================================================
-
-        /// <summary>
-        /// Plays a sound clip.
-        /// </summary>
-        /// <param name="clip">The clip to play.</param>
+        /// Αναπαράγει ένα ηχητικό clip.
+        /// <param name="clip">Το clip προς αναπαραγωγή.</param>
         private void PlaySound(AudioClip clip)
         {
             if (audioSource != null && clip != null)
@@ -362,18 +280,10 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // PUBLIC ACCESSORS
-        //=============================================================================
-
-        /// <summary>
-        /// Returns whether the chest is currently open.
-        /// </summary>
+        /// Επιστρέφει αν το μπαούλο είναι τώρα ανοιχτό.
         public bool IsOpen => isOpen;
 
-        /// <summary>
-        /// Returns whether the chest has been opened at least once.
-        /// </summary>
+        /// Επιστρέφει αν το μπαούλο έχει ανοιχτεί τουλάχιστον μία φορά.
         public bool HasBeenOpened => hasBeenOpened;
     }
 }

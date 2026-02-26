@@ -4,178 +4,115 @@ using TMPro;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// Handles player interaction with IInteractable objects in the game world.
-    /// Uses raycasting from the camera to detect interactable objects and manages
-    /// the interaction state machine (ready, interacting, end, abort).
-    ///
-    /// Setup:
-    /// 1. Attach to the player's camera (or a child of it)
-    /// 2. Assign the InteractorUI reference for displaying messages
-    /// 3. Assign the hint GameObject and prompt text for "Press E to..." prompts
-    /// 4. Ensure interactable objects have the "Interactable" tag and IInteractable component
-    /// 5. Ensure PlayerInput component exists on player with "Interact" action
-    ///
-    /// Version 2.0 - Updated to use New Input System
-    /// </summary>
+    /// Κύριο script για το σύστημα αλληλεπίδρασης του παίκτη.
+    /// Ανιχνεύει αντικείμενα με IInteractable μέσω raycast και διαχειρίζεται τις αλληλεπιδράσεις.
+    /// Προσθέστε αυτό στην κάμερα του παίκτη.
     public class Interactor : MonoBehaviour
     {
-        //=============================================================================
-        // OUTPUT - Current interaction state (readable by other scripts)
-        //=============================================================================
-
         [Header("Output")]
 
-        /// <summary>
-        /// The interactable object the player is currently looking at.
-        /// Null if no valid interactable is in range/view.
-        /// </summary>
+        /// Το αλληλεπιδραστικό αντικείμενο που κοιτάζει τώρα ο παίκτης.
+        /// Null αν δεν υπάρχει έγκυρο αλληλεπιδραστικό σε εμβέλεια/όραση.
         public IInteractable currentInteractable;
 
-        /// <summary>
-        /// Saved reference to the last valid interactable.
-        /// Used for state transitions and calling OnEndInteract/OnAbortInteract.
-        /// </summary>
+        /// Αποθηκευμένη αναφορά στο τελευταίο έγκυρο αλληλεπιδραστικό.
+        /// Χρησιμοποιείται για μεταβάσεις κατάστασης και κλήση OnEndInteract/OnAbortInteract.
         private IInteractable lastInteractable;
-
-        //=============================================================================
-        // SETUP - Configuration in Inspector
-        //=============================================================================
 
         [Header("Raycast Setup")]
 
-        /// <summary>
-        /// The tag that interactable objects must have to be detected.
-        /// All interactable objects should be tagged with this value.
-        /// </summary>
-        [Tooltip("Tag that interactable objects must have.")]
+        /// Το tag που πρέπει να έχουν τα αλληλεπιδραστικά αντικείμενα για να ανιχνευθούν.
+        /// Όλα τα αλληλεπιδραστικά αντικείμενα πρέπει να έχουν αυτό το tag.
+        [Tooltip("Tag που πρέπει να έχουν τα αλληλεπιδραστικά αντικείμενα.")]
         [SerializeField]
         private string targetTag = "Interactable";
 
-        /// <summary>
-        /// Maximum distance for the interaction raycast.
-        /// Objects beyond this distance cannot be interacted with.
-        /// </summary>
-        [Tooltip("Maximum interaction distance in units.")]
+        /// Μέγιστη απόσταση για το raycast αλληλεπίδρασης.
+        /// Αντικείμενα πέρα από αυτή την απόσταση δεν μπορούν να αλληλεπιδράσουν.
+        [Tooltip("Μέγιστη απόσταση αλληλεπίδρασης σε μονάδες.")]
         [SerializeField]
         private float rayMaxDistance = 5f;
 
-        /// <summary>
-        /// Layer mask for the raycast. Determines which layers to check.
-        /// Should exclude player layer and any layers that shouldn't block interaction.
-        /// </summary>
-        [Tooltip("Layers to include in raycast. Exclude player layer.")]
+        /// Layer mask για το raycast. Καθορίζει ποια layers να ελέγχονται.
+        /// Πρέπει να εξαιρεί το layer του παίκτη και τυχόν layers που δεν πρέπει να μπλοκάρουν την αλληλεπίδραση.
+        [Tooltip("Layers να συμπεριληφθούν στο raycast. Εξαιρέστε το layer του παίκτη.")]
         [SerializeField]
-        private LayerMask layerMask = ~0; // Default: all layers (bitwise NOT of 0)
+        private LayerMask layerMask = ~0; // Προεπιλογή: όλα τα layers (bitwise NOT του 0)
 
-        /// <summary>
-        /// Reference to the main camera. If not assigned, uses Camera.main.
-        /// The raycast originates from this camera's position and direction.
-        /// </summary>
-        [Tooltip("Camera to raycast from. Uses Camera.main if not assigned.")]
+        /// Αναφορά στην κύρια κάμερα. Αν δεν ανατεθεί, χρησιμοποιεί Camera.main.
+        /// Το raycast ξεκινά από τη θέση και κατεύθυνση αυτής της κάμερας.
+        [Tooltip("Κάμερα από την οποία εκπέμπεται το raycast. Χρησιμοποιεί Camera.main αν δεν ανατεθεί.")]
         [SerializeField]
         private Camera playerCamera;
 
         [Header("UI References")]
 
-        /// <summary>
-        /// Reference to the InteractorUI script that handles message display.
-        /// Used to show text returned from interactable objects.
-        /// </summary>
-        [Tooltip("InteractorUI component for displaying interaction messages.")]
+        /// Αναφορά στο InteractorUI script που διαχειρίζεται την εμφάνιση μηνυμάτων.
+        /// Χρησιμοποιείται για εμφάνιση κειμένου που επιστρέφεται από αλληλεπιδραστικά αντικείμενα.
+        [Tooltip("InteractorUI component για εμφάνιση μηνυμάτων αλληλεπίδρασης.")]
         [SerializeField]
         private InteractorUI interactorUI;
 
-        /// <summary>
-        /// The hint panel that shows the interaction prompt.
-        /// This GameObject is shown/hidden based on interaction state.
-        /// </summary>
-        [Tooltip("Panel or GameObject containing the interaction hint UI.")]
+        /// Το panel hint που δείχνει το prompt αλληλεπίδρασης.
+        /// Αυτό το GameObject εμφανίζεται/κρύβεται ανάλογα με την κατάσταση αλληλεπίδρασης.
+        [Tooltip("Panel ή GameObject που περιέχει το hint UI αλληλεπίδρασης.")]
         [SerializeField]
         private GameObject hint;
 
-        /// <summary>
-        /// Text element showing what action will be performed.
-        /// Displays the InteractionPrompt from the current IInteractable.
-        /// </summary>
-        [Tooltip("TextMeshPro element showing 'Press E to [action]'.")]
+        /// Text element που δείχνει ποια ενέργεια θα εκτελεστεί.
+        /// Εμφανίζει το InteractionPrompt από το τρέχον IInteractable.
+        [Tooltip("TextMeshPro element που δείχνει 'Press E to [ενέργεια]'.")]
         [SerializeField]
         private TextMeshProUGUI promptText;
 
-        /// <summary>
-        /// Format string for the interaction prompt.
-        /// {0} is replaced with the interactable's InteractionPrompt property.
-        /// </summary>
-        [Tooltip("Format for prompt text. {0} = action name.")]
+        /// Format string για το prompt αλληλεπίδρασης.
+        /// Το {0} αντικαθίσταται με την ιδιότητα InteractionPrompt του αλληλεπιδραστικού.
+        [Tooltip("Format για το κείμενο prompt. {0} = όνομα ενέργειας.")]
         [SerializeField]
         private string promptFormat = "Press E to {0}";
 
-        //=============================================================================
-        // INPUT - New Input System references
-        //=============================================================================
-
         [Header("Input")]
 
-        /// <summary>
-        /// Reference to the PlayerInput component.
-        /// If not assigned, searches in parent GameObjects.
-        /// </summary>
-        [Tooltip("PlayerInput component. Auto-found if not assigned.")]
+        /// Αναφορά στο PlayerInput component.
+        /// Αν δεν ανατεθεί, ψάχνει στα parent GameObjects.
+        [Tooltip("PlayerInput component. Βρίσκεται αυτόματα αν δεν ανατεθεί.")]
         [SerializeField]
         private PlayerInput playerInput;
 
-        /// <summary>
-        /// Reference to the Interact input action.
-        /// Cached on Start for performance.
-        /// </summary>
+        /// Αναφορά στο Interact input action.
+        /// Αποθηκεύεται στο Start για απόδοση.
         private InputAction interactAction;
 
-        /// <summary>
-        /// Reference to the Move input action.
-        /// Used to cancel interactions when player moves.
-        /// </summary>
+        /// Αναφορά στο Move input action.
+        /// Χρησιμοποιείται για ακύρωση αλληλεπιδράσεων όταν ο παίκτης κινείται.
         private InputAction moveAction;
 
-        //=============================================================================
-        // STATE - Internal state tracking
-        //=============================================================================
-
-        /// <summary>
-        /// True when player is looking at an interactable and can press E.
-        /// </summary>
+        /// True όταν ο παίκτης κοιτάζει ένα αλληλεπιδραστικό και μπορεί να πατήσει E.
         private bool readyInteract;
 
-        /// <summary>
-        /// True when player is actively interacting with an object.
-        /// </summary>
+        /// True όταν ο παίκτης αλληλεπιδρά ενεργά με ένα αντικείμενο.
         private bool interacting;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
-
-        /// <summary>
-        /// Initializes references and validates setup.
-        /// </summary>
+        /// Αρχικοποιεί αναφορές και επικυρώνει τη ρύθμιση.
         private void Start()
         {
-            // Reset state variables
+            // Επαναφορά μεταβλητών κατάστασης
             currentInteractable = null;
             interacting = false;
 
-            // Get camera reference if not assigned
+            // Λήψη αναφοράς κάμερας αν δεν ανατέθηκε
             if (playerCamera == null)
             {
                 playerCamera = Camera.main;
                 if (playerCamera == null)
                 {
-                    Debug.LogError("[Interactor] No camera assigned and Camera.main is null!");
+                    Debug.LogError("[Interactor] Δεν ανατέθηκε κάμερα και το Camera.main είναι null!");
                     enabled = false;
                     return;
                 }
             }
 
-            // Get PlayerInput component
+            // Λήψη PlayerInput component
             if (playerInput == null)
             {
                 playerInput = GetComponentInParent<PlayerInput>();
@@ -183,82 +120,74 @@ namespace MyProject.Interact
 
             if (playerInput == null)
             {
-                Debug.LogError("[Interactor] No PlayerInput component found!");
+                Debug.LogError("[Interactor] Δεν βρέθηκε PlayerInput component!");
                 enabled = false;
                 return;
             }
 
-            // Cache input actions
+            // Αποθήκευση input actions
             interactAction = playerInput.actions["Interact"];
             moveAction = playerInput.actions["Move"];
 
             if (interactAction == null)
             {
-                Debug.LogError("[Interactor] 'Interact' action not found in Input Actions!");
+                Debug.LogError("[Interactor] Δεν βρέθηκε το 'Interact' action στα Input Actions!");
                 enabled = false;
                 return;
             }
 
-            // Validate UI references (warnings only - system works without them)
+            // Επικύρωση αναφορών UI (μόνο προειδοποιήσεις - το σύστημα λειτουργεί χωρίς αυτά)
             if (interactorUI == null)
-                Debug.LogWarning("[Interactor] InteractorUI not assigned. Messages won't display.");
+                Debug.LogWarning("[Interactor] Δεν ανατέθηκε InteractorUI. Τα μηνύματα δεν θα εμφανίζονται.");
             if (hint == null)
-                Debug.LogWarning("[Interactor] Hint GameObject not assigned. Prompts won't show.");
+                Debug.LogWarning("[Interactor] Δεν ανατέθηκε Hint GameObject. Τα prompts δεν θα εμφανίζονται.");
             if (promptText == null)
-                Debug.LogWarning("[Interactor] PromptText not assigned. Action text won't show.");
+                Debug.LogWarning("[Interactor] Δεν ανατέθηκε PromptText. Το κείμενο ενέργειας δεν θα εμφανίζεται.");
 
-            // Initialize to clean state
+            // Αρχικοποίηση σε καθαρή κατάσταση
             AbortInteract();
         }
 
-        /// <summary>
-        /// Performs raycast detection and handles input each frame.
-        /// </summary>
+        /// Εκτελεί ανίχνευση raycast και διαχειρίζεται input κάθε frame.
         private void Update()
         {
-            // Reset current interactable each frame
+            // Επαναφορά τρέχοντος αλληλεπιδραστικού κάθε frame
             currentInteractable = null;
 
-            // Perform raycast from camera center
+            // Εκτέλεση raycast από το κέντρο της κάμερας
             PerformRaycast();
 
-            // Handle state transitions based on what we're looking at
+            // Διαχείριση μεταβάσεων κατάστασης ανάλογα με το τι κοιτάμε
             HandleStateTransitions();
 
-            // Handle input based on current state
+            // Διαχείριση input ανάλογα με την τρέχουσα κατάσταση
             HandleInput();
 
-            // Update last interactable reference for next frame comparisons
+            // Ενημέρωση αναφοράς τελευταίου αλληλεπιδραστικού για συγκρίσεις επόμενου frame
             if (currentInteractable != null)
             {
                 lastInteractable = currentInteractable;
             }
         }
 
-        //=============================================================================
-        // RAYCAST DETECTION
-        //=============================================================================
-
-        /// <summary>
-        /// Casts a ray from the camera center to detect interactable objects.
-        /// Updates currentInteractable if a valid object is found.
-        /// </summary>
+        /// Εκπέμπει μια ακτίνα από το κέντρο της κάμερας για ανίχνευση αλληλεπιδραστικών αντικειμένων.
+        /// Ενημερώνει το currentInteractable αν βρεθεί έγκυρο αντικείμενο.
         private void PerformRaycast()
         {
             RaycastHit hit;
 
-            // Raycast from camera position in camera's forward direction
-            // This ensures we're detecting what the player is actually looking at
+            // Raycast από τη θέση της κάμερας προς την κατεύθυνση forward της κάμερας
+            // Αυτό εξασφαλίζει ότι ανιχνεύουμε αυτό που πραγματικά κοιτάζει ο παίκτης
             if (Physics.Raycast(playerCamera.transform.position,
                                playerCamera.transform.forward,
                                out hit,
                                rayMaxDistance,
                                layerMask))
             {
-                // Check if hit object has the correct tag
+                // Έλεγχος αν το αντικείμενο που χτυπήθηκε έχει το σωστό tag
                 if (hit.collider.CompareTag(targetTag))
                 {
-                    // Try to get IInteractable component
+                    // Προσπάθεια λήψης IInteractable component
                     IInteractable interactable = hit.collider.GetComponent<IInteractable>();
                     if (interactable != null)
                     {
@@ -268,40 +197,32 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // STATE MACHINE
-        //=============================================================================
-
-        /// <summary>
-        /// Handles transitions between ready/not ready states based on raycast results.
-        /// </summary>
+        /// Διαχειρίζεται μεταβάσεις μεταξύ καταστάσεων ready/not ready βάσει αποτελεσμάτων raycast.
         private void HandleStateTransitions()
         {
-            // Transition: Not Ready → Ready (started looking at interactable)
+            // Μετάβαση: Not Ready → Ready (άρχισε να κοιτάζει αλληλεπιδραστικό)
             if (currentInteractable != null && !readyInteract)
             {
                 ReadyInteract();
             }
-            // Transition: Ready → Not Ready (stopped looking at interactable)
+            // Μετάβαση: Ready → Not Ready (σταμάτησε να κοιτάζει αλληλεπιδραστικό)
             else if (currentInteractable == null && readyInteract)
             {
                 AbortInteract();
             }
-            // Update prompt text if looking at a different interactable
+            // Ενημέρωση κειμένου prompt αν κοιτάζει διαφορετικό αλληλεπιδραστικό
             else if (currentInteractable != null && currentInteractable != lastInteractable)
             {
                 UpdatePromptText();
             }
         }
 
-        /// <summary>
-        /// Handles player input for interaction and cancellation.
-        /// </summary>
+        /// Διαχειρίζεται input παίκτη για αλληλεπίδραση και ακύρωση.
         private void HandleInput()
         {
             if (!interacting)
             {
-                // Not interacting - check for interact input
+                // Δεν αλληλεπιδρά - έλεγχος για input αλληλεπίδρασης
                 if (readyInteract && interactAction.WasPressedThisFrame())
                 {
                     Interact();
@@ -309,7 +230,7 @@ namespace MyProject.Interact
             }
             else
             {
-                // Currently interacting - check for cancellation
+                // Αλληλεπιδρά τώρα - έλεγχος για ακύρωση
                 if (ShouldCancelInteraction())
                 {
                     EndInteract();
@@ -317,14 +238,12 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Determines if the current interaction should be cancelled.
-        /// Cancellation occurs when: player moves, or looks at different/no object.
-        /// </summary>
-        /// <returns>True if interaction should be cancelled.</returns>
+        /// Καθορίζει αν η τρέχουσα αλληλεπίδραση πρέπει να ακυρωθεί.
+        /// Ακύρωση συμβαίνει όταν: ο παίκτης κινείται, ή κοιτάζει διαφορετικό/κανένα αντικείμενο.
+        /// <returns>True αν η αλληλεπίδραση πρέπει να ακυρωθεί.</returns>
         private bool ShouldCancelInteraction()
         {
-            // Cancel if player starts moving
+            // Ακύρωση αν ο παίκτης αρχίσει να κινείται
             if (moveAction != null)
             {
                 Vector2 moveInput = moveAction.ReadValue<Vector2>();
@@ -334,13 +253,13 @@ namespace MyProject.Interact
                 }
             }
 
-            // Cancel if no longer looking at an interactable
+            // Ακύρωση αν δεν κοιτάζει πλέον αλληλεπιδραστικό
             if (currentInteractable == null)
             {
                 return true;
             }
 
-            // Cancel if looking at a different interactable
+            // Ακύρωση αν κοιτάζει διαφορετικό αλληλεπιδραστικό
             if (currentInteractable != lastInteractable)
             {
                 return true;
@@ -349,100 +268,82 @@ namespace MyProject.Interact
             return false;
         }
 
-        //=============================================================================
-        // STATE METHODS
-        //=============================================================================
-
-        /// <summary>
-        /// Called when player starts looking at an interactable object.
-        /// Shows the interaction hint and notifies the object.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης αρχίσει να κοιτάζει ένα αλληλεπιδραστικό αντικείμενο.
+        /// Εμφανίζει το hint αλληλεπίδρασης και ειδοποιεί το αντικείμενο.
         private void ReadyInteract()
         {
             readyInteract = true;
 
-            // Show interaction hint UI
+            // Εμφάνιση hint UI αλληλεπίδρασης
             if (hint != null)
             {
                 hint.SetActive(true);
             }
 
-            // Update the prompt text with this object's action
+            // Ενημέρωση κειμένου prompt με την ενέργεια αυτού του αντικειμένου
             UpdatePromptText();
 
-            // Notify the interactable object
+            // Ειδοποίηση του αλληλεπιδραστικού αντικειμένου
             currentInteractable.OnReadyInteract();
         }
 
-        /// <summary>
-        /// Called when player stops looking at an interactable without interacting.
-        /// Hides the interaction hint and notifies the object.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης σταματήσει να κοιτάζει ένα αλληλεπιδραστικό χωρίς αλληλεπίδραση.
+        /// Κρύβει το hint αλληλεπίδρασης και ειδοποιεί το αντικείμενο.
         private void AbortInteract()
         {
             readyInteract = false;
 
-            // Hide interaction hint UI
+            // Απόκρυψη hint UI αλληλεπίδρασης
             if (hint != null)
             {
                 hint.SetActive(false);
             }
 
-            // Notify the previously looked-at object
+            // Ειδοποίηση του αντικειμένου που κοιτούσε προηγουμένως
             if (lastInteractable != null)
             {
                 lastInteractable.OnAbortInteract();
             }
         }
 
-        /// <summary>
-        /// Called when player presses the interact button.
-        /// Initiates the interaction with the current object.
-        /// </summary>
+        /// Καλείται όταν ο παίκτης πατήσει το κουμπί αλληλεπίδρασης.
+        /// Ξεκινά την αλληλεπίδραση με το τρέχον αντικείμενο.
         private void Interact()
         {
             interacting = true;
             readyInteract = true;
 
-            // Hide the hint during interaction
+            // Απόκρυψη του hint κατά την αλληλεπίδραση
             if (hint != null)
             {
                 hint.SetActive(false);
             }
 
-            // Call the object's interact method, passing ourselves for callbacks
+            // Κλήση της μεθόδου interact του αντικειμένου, περνώντας τον εαυτό μας για callbacks
             currentInteractable.OnInteract(this);
         }
 
-        /// <summary>
-        /// Called when an active interaction ends (cancelled or completed).
-        /// Cleans up state and notifies the object.
-        /// </summary>
+        /// Καλείται όταν τελειώνει μια ενεργή αλληλεπίδραση (ακυρώθηκε ή ολοκληρώθηκε).
+        /// Καθαρίζει την κατάσταση και ειδοποιεί το αντικείμενο.
         private void EndInteract()
         {
             interacting = false;
             readyInteract = false;
 
-            // Notify the object that interaction ended
+            // Ειδοποίηση του αντικειμένου ότι τελείωσε η αλληλεπίδραση
             if (lastInteractable != null)
             {
                 lastInteractable.OnEndInteract();
             }
 
-            // Hide any displayed message
+            // Απόκρυψη οποιουδήποτε εμφανιζόμενου μηνύματος
             if (interactorUI != null)
             {
                 interactorUI.HideTextMessage();
             }
         }
 
-        //=============================================================================
-        // UI HELPERS
-        //=============================================================================
-
-        /// <summary>
-        /// Updates the prompt text to show the current interactable's action.
-        /// </summary>
+        /// Ενημερώνει το κείμενο prompt για να δείξει την ενέργεια του τρέχοντος αλληλεπιδραστικού.
         private void UpdatePromptText()
         {
             if (promptText != null && currentInteractable != null)
@@ -452,15 +353,9 @@ namespace MyProject.Interact
             }
         }
 
-        //=============================================================================
-        // PUBLIC METHODS - Called by IInteractable objects
-        //=============================================================================
-
-        /// <summary>
-        /// Called by interactable objects to end their own interaction.
-        /// Validates that the requester is the current interactable.
-        /// </summary>
-        /// <param name="requester">The IInteractable requesting to end interaction.</param>
+        /// Καλείται από αλληλεπιδραστικά αντικείμενα για να τερματίσουν τη δική τους αλληλεπίδραση.
+        /// Επικυρώνει ότι ο αιτών είναι το τρέχον αλληλεπιδραστικό.
+        /// <param name="requester">Το IInteractable που ζητά τερματισμό αλληλεπίδρασης.</param>
         public void EndInteract(IInteractable requester)
         {
             if (requester == lastInteractable)
@@ -469,11 +364,9 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Receives a text message from an interactable object and displays it.
-        /// Used by objects like signs that want to show text to the player.
-        /// </summary>
-        /// <param name="message">The message to display.</param>
+        /// Λαμβάνει μήνυμα κειμένου από αλληλεπιδραστικό αντικείμενο και το εμφανίζει.
+        /// Χρησιμοποιείται από αντικείμενα όπως πινακίδες που θέλουν να δείξουν κείμενο στον παίκτη.
+        /// <param name="message">Το μήνυμα προς εμφάνιση.</param>
         public void ReceiveInteract(string message)
         {
             if (interactorUI != null)
@@ -482,34 +375,26 @@ namespace MyProject.Interact
             }
         }
 
-        /// <summary>
-        /// Receives an interactable object reference for advanced interactions.
-        /// Override this in derived classes for custom behavior.
-        /// </summary>
-        /// <param name="interactable">The interactable object.</param>
+        /// Λαμβάνει αναφορά αλληλεπιδραστικού αντικειμένου για προχωρημένες αλληλεπιδράσεις.
+        /// Override αυτό σε παράγωγες κλάσεις για προσαρμοσμένη συμπεριφορά.
+        /// <param name="interactable">Το αλληλεπιδραστικό αντικείμενο.</param>
         public void ReceiveInteract(IInteractable interactable)
         {
-            // Reserved for advanced use cases
-            Debug.Log($"[Interactor] Received interactable: {interactable}");
+            // Δεσμευμένο για προχωρημένες περιπτώσεις χρήσης
+            Debug.Log($"[Interactor] Ελήφθη interactable: {interactable}");
         }
 
-        //=============================================================================
-        // DEBUG VISUALIZATION
-        //=============================================================================
-
-        /// <summary>
-        /// Draws the interaction raycast in the Scene view for debugging.
-        /// </summary>
+        /// Σχεδιάζει το raycast αλληλεπίδρασης στο Scene view για debugging.
         private void OnDrawGizmosSelected()
         {
             Camera cam = playerCamera != null ? playerCamera : Camera.main;
             if (cam == null) return;
 
-            // Draw the raycast line
+            // Σχεδίαση της γραμμής raycast
             Gizmos.color = currentInteractable != null ? Color.green : Color.yellow;
             Gizmos.DrawRay(cam.transform.position, cam.transform.forward * rayMaxDistance);
 
-            // Draw a sphere at max range
+            // Σχεδίαση σφαίρας στη μέγιστη εμβέλεια
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(cam.transform.position + cam.transform.forward * rayMaxDistance, 0.1f);
         }

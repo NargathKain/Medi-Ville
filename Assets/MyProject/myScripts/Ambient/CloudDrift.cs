@@ -13,9 +13,7 @@ namespace MyProject.Ambient
         /// κίνηση σε ευθεία ή περιστροφή γύρω από pivot
         public enum MovementMode
         {
-            /// <summary>Move in a straight line along an axis.</summary>
             Linear,
-            /// <summary>Rotate around a pivot point (Y axis).</summary>
             Rotate
         }
 

@@ -3,93 +3,69 @@ using TMPro;
 
 namespace MyProject.Interact
 {
-    /// <summary>
-    /// UI helper for the Interactor system.
-    /// Handles displaying text messages from interactable objects on the screen.
-    /// Attach this to a Canvas or UI manager GameObject.
+    /// Βοηθητικό UI για το σύστημα Interactor.
+    /// Διαχειρίζεται την εμφάνιση μηνυμάτων κειμένου από αλληλεπιδραστικά αντικείμενα στην οθόνη.
+    /// Προσθέστε το σε ένα Canvas ή UI manager GameObject.
     ///
-    /// Setup:
-    /// 1. Create a TextMeshProUGUI element on your Canvas for displaying messages
-    /// 2. Assign it to the messageText field
-    /// 3. Reference this component in the Interactor script
-    ///
-    /// Version 2.0 - Added namespace and improved comments
-    /// </summary>
+    /// Ρύθμιση:
+    /// 1. Δημιουργήστε ένα TextMeshProUGUI element στο Canvas σας για εμφάνιση μηνυμάτων
+    /// 2. Αναθέστε το στο πεδίο messageText
+    /// 3. Κάντε reference αυτό το component στο Interactor script
     public class InteractorUI : MonoBehaviour
     {
-        //=============================================================================
-        // SERIALIZED FIELDS
-        //=============================================================================
-
         [Header("UI References")]
 
-        /// <summary>
-        /// The TextMeshProUGUI element that displays interaction messages.
-        /// This is where text from signs, books, etc. will be shown.
-        /// </summary>
-        [Tooltip("TextMeshPro element for displaying interaction messages.")]
+        /// Το TextMeshProUGUI element που εμφανίζει τα μηνύματα αλληλεπίδρασης.
+        /// Εδώ θα εμφανίζεται κείμενο από πινακίδες, βιβλία, κλπ.
+        [Tooltip("TextMeshPro element για εμφάνιση μηνυμάτων αλληλεπίδρασης.")]
         [SerializeField]
         private TextMeshProUGUI messageText;
 
-        //=============================================================================
-        // UNITY LIFECYCLE
-        //=============================================================================
-
-        /// <summary>
-        /// Initializes the UI by hiding the message text.
-        /// </summary>
+        /// Αρχικοποιεί το UI κρύβοντας το κείμενο μηνύματος.
         private void Start()
         {
-            // Start with message hidden
+            // Ξεκινάμε με το μήνυμα κρυμμένο
             HideTextMessage();
 
-            // Warn if reference is missing
+            // Προειδοποίηση αν λείπει η αναφορά
             if (messageText == null)
             {
-                Debug.LogWarning("[InteractorUI] MessageText not assigned. Messages won't display.");
+                Debug.LogWarning("[InteractorUI] Το MessageText δεν έχει ανατεθεί. Τα μηνύματα δεν θα εμφανίζονται.");
             }
         }
 
-        //=============================================================================
-        // PUBLIC METHODS
-        //=============================================================================
-
-        /// <summary>
-        /// Displays a text message on screen.
-        /// Called by interactable objects (via Interactor.ReceiveInteract) to show text.
-        /// </summary>
-        /// <param name="message">The message to display.</param>
+        /// Εμφανίζει ένα μήνυμα κειμένου στην οθόνη.
+        /// Καλείται από αλληλεπιδραστικά αντικείμενα (μέσω Interactor.ReceiveInteract) για εμφάνιση κειμένου.
+        /// <param name="message">Το μήνυμα προς εμφάνιση.</param>
         public void ShowTextMessage(string message)
         {
             if (messageText == null)
             {
-                Debug.LogWarning("[InteractorUI] ShowTextMessage: messageText not assigned.");
+                Debug.LogWarning("[InteractorUI] ShowTextMessage: το messageText δεν έχει ανατεθεί.");
                 return;
             }
 
-            // Set the text content
+            // Ορισμός του περιεχομένου κειμένου
             messageText.text = message;
 
-            // Show the text element
+            // Εμφάνιση του text element
             messageText.gameObject.SetActive(true);
         }
 
-        /// <summary>
-        /// Hides the message text UI element.
-        /// Called when interaction ends or is cancelled.
-        /// </summary>
+        /// Κρύβει το UI element του μηνύματος κειμένου.
+        /// Καλείται όταν τελειώνει ή ακυρώνεται η αλληλεπίδραση.
         public void HideTextMessage()
         {
             if (messageText == null)
             {
-                Debug.LogWarning("[InteractorUI] HideTextMessage: messageText not assigned.");
+                Debug.LogWarning("[InteractorUI] HideTextMessage: το messageText δεν έχει ανατεθεί.");
                 return;
             }
 
-            // Clear text content for safety
+            // Καθαρισμός περιεχομένου κειμένου για ασφάλεια
             messageText.text = "";
 
-            // Hide the text element
+            // Απόκρυψη του text element
             messageText.gameObject.SetActive(false);
         }
     }
