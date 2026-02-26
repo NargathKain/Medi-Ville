@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe777095c90d60b4795db85934b80792, type: 3}
+  m_Name: MournKnight
+  m_EditorClassIdentifier: Assembly-CSharp::MyProject.Dialogue.DialogueData
+  npcName: MournKnight
+  dialogueLines:
+  - Why are we still here? Just to suffer?
+  - "Every night, I can feel my leg and my arm... even my fingers... the body I've
+    lost... the comrades I've lost... won't stop hurting. \n"
+  - 'It''s like they''re all still there. You feel it too, don''t you? '
+  autoAdvanceTime: 0
